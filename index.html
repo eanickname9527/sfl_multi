@@ -285,6 +285,30 @@
             opacity: 1;
         }
 
+        footer {
+            margin-top: 50px;
+            padding: 30px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+        }
+
+        .footer-info {
+            color: #555;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .footer-info .divider {
+            color: #333;
+        }
+
+        #lastUpdated {
+            color: #888;
+        }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -455,6 +479,12 @@
                 </div>
             </section>
         </main>
+
+        <footer>
+            <div class="footer-info">
+                <span>最後更新: <span id="lastUpdated">{{RELEASE_DATE}}</span></span>
+            </div>
+        </footer>
     </div>
 
     <div id="toast" class="toast">設定已保存！</div>
@@ -500,8 +530,25 @@
             };
         });
 
+        // 系統自動更新檢查
+        function checkSystemUpdate() {
+            const currentUpdateTime = document.getElementById('lastUpdated').textContent;
+            const savedUpdateTime = localStorage.getItem('sfl_system_last_update');
+
+            if (savedUpdateTime && savedUpdateTime !== currentUpdateTime) {
+                // 如果有舊紀錄且不一致，則清理快取
+                for (let i = 1; i <= 3; i++) {
+                    localStorage.removeItem(`sfl_battle_stats_${i}`);
+                }
+                console.log("系統已更新，已自動重置本地設定。");
+            }
+            // 儲存最新的更新時間
+            localStorage.setItem('sfl_system_last_update', currentUpdateTime);
+        }
+
         // 根據 Hash 初始化視圖
         window.addEventListener('load', () => {
+            checkSystemUpdate();
             const hash = window.location.hash.replace('#', '');
             if (hash && document.getElementById(hash)) {
                 const btn = document.querySelector(`[data-view="${hash}"]`);
