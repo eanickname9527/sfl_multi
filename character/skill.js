@@ -1,7 +1,5 @@
 /**
  * SFL 技能資料庫 (修正版 V2)
- * 根據遊戲實際數值 (1等斬擊=1.2, 2等=1.5) 與 upgrade 檔案邏輯對齊：
- * 公式改為: 1等數值 + (lv - 1) * 每級成長
  */
 const ATTACK_SKILLS_DATA = {
     '普攻': { attr: '無', ub: 0, cd: 0, multi: 1, cri: false },
