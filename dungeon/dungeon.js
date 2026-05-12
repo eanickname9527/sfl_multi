@@ -161,8 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         let e = { ...enemy };
+        e.maxHp = e.hp;
+        e.skillCDs = {};
         e.activeDots = [];
         e.activeDebuffs = [];
+        e.activeBuffs = [];
 
         // 輔助函式：取得減益倍率
         const getDebuffMulti = (target, attr) => {
@@ -193,17 +196,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // 輔助函式：取得屬性倍率
         const getFinalAttrMulti = (atkAttrStr, defAttrStr) => {
             if (typeof window.getAttributeMultiplier !== 'function') return 1.0;
-            const atkAttrs = (atkAttrStr || '無').split(/[、,]/);
-            const defAttrs = (defAttrStr || '無').split(/[、,]/);
-            let best = 1.0, worst = 1.0, hasAdv = false;
+            const atkAttrs = (atkAttrStr || '無').split(/[、,]/).map(s => s.trim()).filter(s => s);
+            const defAttrs = (defAttrStr || '無').split(/[、,]/).map(s => s.trim()).filter(s => s);
+            
+            let totalMultiplier = 0;
+            let combinations = 0;
+
             for (const aa of atkAttrs) {
                 for (const da of defAttrs) {
-                    const m = window.getAttributeMultiplier(aa.trim(), da.trim());
-                    if (m > 1 && m > best) { best = m; hasAdv = true; }
-                    if (m < 1 && m < worst) worst = m;
+                    totalMultiplier += window.getAttributeMultiplier(aa, da);
+                    combinations++;
                 }
             }
-            return hasAdv ? best : worst;
+            return combinations > 0 ? (totalMultiplier / combinations) : 1.0;
         };
 
         // 輔助函式：執行 DOT
@@ -277,6 +282,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     processDebuffs(p, `玩家 ${idx+1}`, verbose);
                     processBuffs(p, `玩家 ${idx+1}`, verbose);
+                    
+                    // 敵方冷卻與狀態處理 (僅處理一次)
+                    if (idx === 0) {
+                        for (const sName in e.skillCDs) {
+                            if (e.skillCDs[sName] > 0) e.skillCDs[sName]--;
+                        }
+                        processBuffs(e, '敵方', verbose);
+                    }
                     
                     // 處理待施放技能 (元素匯聚)
                     if (p.pendingSkill) {
@@ -388,33 +401,107 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 3. 敵方行動 (同時攻擊所有玩家)
+            // 3. 敵方行動
             if (e.hp > 0) {
-                const eAtk = e.attack * getDebuffMulti(e, 'attack');
-                activePlayers.forEach((p, idx) => {
-                    if (p.hp <= 0) return;
-
-                    const pEva = p.evasion * getDebuffMulti(p, 'evasion') * getBuffMulti(p, 'evasion');
-                    let e_hit = (e.hit_rate || 100) - pEva - ((p.luck || 0) * 0.004);
+                const eAtk = e.attack * getDebuffMulti(e, 'attack') * getBuffMulti(e, 'attack');
+                const eHpPercent = (e.hp / e.maxHp) * 100;
+                
+                // 輔助：執行敵方命中與傷害
+                const executeEnemyHit = (targetP, pIdx, skill) => {
+                    const pEva = targetP.evasion * getDebuffMulti(targetP, 'evasion') * getBuffMulti(targetP, 'evasion');
+                    let e_hit = (e.hit_rate || 100) - pEva - ((targetP.luck || 0) * 0.004);
                     e_hit = Math.max(2, e_hit);
 
                     if (Math.random() * 100 < e_hit) {
-                        const attrMulti = getFinalAttrMulti(e.attribute, '無');
-                        const diff = e.level - p.level;
+                        const attrMulti = getFinalAttrMulti(e.attribute, '無') || 1.0;
+                        const diff = e.level - targetP.level;
                         const eLvMultiForP = diff >= 7 ? 1.5 : (diff <= -7 ? 0.5 : 1.0 + (diff * (0.5 / 7)));
                         
-                        const eRandomMulti = 1 + Math.random() * 2;
-                        const currentPMitigation = hasBuff(p, 'invincible') ? 1.0 : p.mitigation;
-                        let damage = eAtk * eLvMultiForP * attrMulti * (1 - currentPMitigation) * eRandomMulti;
-                        const prevHp = p.hp;
-                        p.hp -= damage;
-                        if (p.pendingSkill) p.pendingSkill.damageTaken += damage;
+                        const currentPMitigation = hasBuff(targetP, 'invincible') ? 1.0 : targetP.mitigation;
                         
-                        if (verbose) battleLog(`[敵方] 擊中 玩家 ${idx+1}！造成 ${Math.floor(damage).toLocaleString()} 傷害 (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(Math.max(0, p.hp)).toLocaleString()})`, 'enemy');
+                        // 支援 multi 或 damage 欄位
+                        const skillMulti = skill.multi || skill.damage || 1.0;
+                        
+                        let damage = eAtk * skillMulti * eLvMultiForP * attrMulti * (1 - currentPMitigation);
+                        
+                        // 保底傷害 1
+                        damage = Math.max(1, Math.floor(damage));
+                        
+                        const prevHp = targetP.hp;
+                        targetP.hp -= damage;
+                        if (targetP.pendingSkill) targetP.pendingSkill.damageTaken += damage;
+                        
+                        if (verbose) battleLog(`[敵方] ${skill.name} 擊中 玩家 ${pIdx+1}！造成 ${damage.toLocaleString()} 傷害 (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(Math.max(0, targetP.hp)).toLocaleString()})`, 'enemy');
+                        
+                        // 處理 DOT/Debuff (100% 命中)
+                        if (skill.dot) {
+                            targetP.activeDots.push({ name: skill.dot.name, dmg: skill.dot.dmg, dur: skill.dot.dur });
+                        }
+                        if (skill.debuff) {
+                            targetP.activeDebuffs.push({ 
+                                name: skill.debuff.name, 
+                                effect: 1 - (skill.debuff.value || skill.debuff.multiplier || 1), 
+                                attr: skill.debuff.effect || skill.debuff.effectType, 
+                                dur: skill.debuff.dur || skill.debuff.round 
+                            });
+                        }
                     } else if (verbose) {
-                        battleLog(`[敵方] 對 玩家 ${idx+1} 的攻擊被閃避！`, 'enemy');
+                        battleLog(`[敵方] ${skill.name} 對 玩家 ${pIdx+1} 的攻擊被閃避！`, 'enemy');
                     }
-                });
+                };
+
+                // 篩選可用技能
+                const availableSkills = (e.skills || []).filter(s => 
+                    eHpPercent <= (s.threshold || 100) && (e.skillCDs[s.name] || 0) === 0
+                );
+
+                let selectedSkill = null;
+                if (availableSkills.length > 0) {
+                    selectedSkill = availableSkills[Math.floor(Math.random() * availableSkills.length)];
+                }
+
+                if (selectedSkill) {
+                    e.skillCDs[selectedSkill.name] = (selectedSkill.cd || 0);
+
+                    if (selectedSkill.type === 'self') {
+                        if (selectedSkill.buff) {
+                             e.activeBuffs.push({ 
+                                 name: selectedSkill.buff.name, 
+                                 value: selectedSkill.buff.value || selectedSkill.buff.multiplier, 
+                                 effect: selectedSkill.buff.effect || selectedSkill.buff.effectType, 
+                                 dur: selectedSkill.buff.dur || selectedSkill.buff.round, 
+                                 pending: true 
+                             });
+                             if (verbose) battleLog(`[敵方] 使用 ${selectedSkill.name}！獲得 ${selectedSkill.buff.name} 效果`, 'info');
+                        }
+                        if (selectedSkill.heal) {
+                            const prevHp = e.hp;
+                            e.hp = Math.min(e.maxHp, e.hp + selectedSkill.heal);
+                            if (verbose) battleLog(`[敵方] 使用 ${selectedSkill.name}！恢復 ${selectedSkill.heal.toLocaleString()} 生命 (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(e.hp).toLocaleString()})`, 'success');
+                        }
+                    } else if (selectedSkill.type === 'multi') {
+                        if (verbose) battleLog(`[敵方] 發動全體技能：${selectedSkill.name}！`, 'enemy');
+                        activePlayers.forEach((p, idx) => {
+                             if (p.hp <= 0) return;
+                             executeEnemyHit(p, idx, selectedSkill);
+                        });
+                    } else {
+                        const alivePlayers = activePlayers.filter(p => p.hp > 0);
+                        if (alivePlayers.length > 0) {
+                            const targetP = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                            const targetIdx = activePlayers.indexOf(targetP);
+                            executeEnemyHit(targetP, targetIdx, selectedSkill);
+                        }
+                    }
+                } else {
+                    // 普攻 (Fallback)
+                    const alivePlayers = activePlayers.filter(p => p.hp > 0);
+                    if (alivePlayers.length > 0) {
+                        const targetP = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                        const targetIdx = activePlayers.indexOf(targetP);
+                        executeEnemyHit(targetP, targetIdx, { name: '普攻', multi: 1.0 });
+                    }
+                }
             }
 
             round++;
