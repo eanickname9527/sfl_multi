@@ -29,10 +29,15 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div class="level-tag">等級 ${enemy.level}</div>
                 <h3>${enemy.name}</h3>
-                <div class="desc">${enemy.description || '暫無描述'}</div>
-                <div style="margin-top:20px; display:flex; flex-wrap:wrap; gap:10px;">
+                <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px 15px;">
+                    <span style="font-size:0.8rem; color:#888;">屬性: <b style="color:#ce9178;">${enemy.attribute}</b></span>
                     <span style="font-size:0.8rem; color:#888;">生命: <b style="color:#fff;">${enemy.hp.toLocaleString()}</b></span>
                     <span style="font-size:0.8rem; color:#888;">攻擊: <b style="color:#fff;">${enemy.attack.toLocaleString()}</b></span>
+                    <span style="font-size:0.8rem; color:#888;">護甲: <b style="color:#fff;">${enemy.shield.toLocaleString()}</b></span>
+                    <span style="font-size:0.8rem; color:#888;">命中: <b style="color:#fff;">${enemy.hit_rate}%</b></span>
+                    <span style="font-size:0.8rem; color:#888;">閃避: <b style="color:#fff;">${enemy.evasion}%</b></span>
+                    <span style="font-size:0.8rem; color:#888;">攻速: <b style="color:#fff;">${enemy.atk_speed}</b></span>
+                    <span style="font-size:0.8rem; color:#888;">穿透: <b style="color:#fff;">${enemy.shield_pen}</b></span>
                 </div>
             `;
             card.onclick = () => showDetail(enemy);
@@ -72,35 +77,92 @@ document.addEventListener('DOMContentLoaded', () => {
         logDisplay.scrollTop = logDisplay.scrollHeight;
     }
 
-    // 4. 戰鬥核心模擬
-    function runBattle(player, enemy, verbose = false) {
-        let p = { ...player };
-        let e = { ...enemy };
+    // 4. 戰鬥核心模擬 (支援多人)
+    function runBattle(players, enemy, verbose = false) {
+        // 初始化所有玩家
+        let activePlayers = players.map(p => {
+            let player = { ...p };
+            player.ownedSkills = [];
+            const hasStrong = player['元素匯聚．強'] && player['元素匯聚．強'] > 0;
 
-        // --- 技能初始化 ---
-        p.ownedSkills = [];
-        if (typeof ATTACK_SKILLS_DATA !== 'undefined') {
-            const hasStrong = p['元素匯聚．強'] && p['元素匯聚．強'] > 0;
-            for (const skillName in ATTACK_SKILLS_DATA) {
-                if (skillName === '普攻') continue;
-                // 有強版則不帶弱版
-                if (skillName === '元素匯聚' && hasStrong) continue;
-                const lv = p[skillName];
-                if (lv && lv > 0) {
-                    p.ownedSkills.push({
-                        name: skillName,
-                        lv: lv,
-                        data: ATTACK_SKILLS_DATA[skillName]
-                    });
+            // 攻擊技能
+            if (typeof ATTACK_SKILLS_DATA !== 'undefined') {
+                for (const skillName in ATTACK_SKILLS_DATA) {
+                    if (skillName === '普攻') continue;
+                    if (skillName === '元素匯聚' && hasStrong) continue;
+                    const lv = player[skillName];
+                    if (lv && lv > 0) {
+                        player.ownedSkills.push({
+                            name: skillName,
+                            lv: lv,
+                            data: ATTACK_SKILLS_DATA[skillName],
+                            type: 'attack'
+                        });
+                    }
                 }
             }
-        }
-        p.skillCDs = {};
-        p.activeDots = [];
+
+            // 治療技能
+            if (typeof HEAL_SKILLS_DATA !== 'undefined') {
+                for (const skillName in HEAL_SKILLS_DATA) {
+                    const lv = player[skillName];
+                    if (lv && lv > 0) {
+                        player.ownedSkills.push({
+                            name: skillName,
+                            lv: lv,
+                            data: HEAL_SKILLS_DATA[skillName],
+                            type: 'heal'
+                        });
+                    }
+                }
+            }
+
+            // 增益技能
+            if (typeof BUFF_SKILLS_DATA !== 'undefined') {
+                for (const skillName in BUFF_SKILLS_DATA) {
+                    const lv = player[skillName];
+                    if (lv && lv > 0) {
+                        player.ownedSkills.push({
+                            name: skillName,
+                            lv: lv,
+                            data: BUFF_SKILLS_DATA[skillName],
+                            type: 'buff'
+                        });
+                    }
+                }
+            }
+            player.skillCDs = {};
+            player.activeDots = [];
+            player.activeDebuffs = [];
+            player.activeBuffs = [];
+            player.pendingSkill = null;
+
+            // 護盾減傷與生命倍化計算
+            const bossShieldPen = enemy.shield_pen || 0;
+            const playerShield = player.shield || 0;
+            const pMitigation = Math.min(Math.max(0, (playerShield - bossShieldPen) * 0.001), 0.99);
+            player.mitigation = pMitigation;
+            
+            const hpMulti = (1 - pMitigation) * 50;
+            const finalHpMulti = pMitigation >= 0.99 ? 1 : hpMulti;
+            const baseHp = player.hp || 5;
+            const lv = player.level || 1;
+            player.maxHp = baseHp * (20 + (lv - 1)) * finalHpMulti;
+            player.hp = player.maxHp;
+
+            // 等級差距倍率
+            const eLv = enemy.level || 1;
+            const diff = player.level - eLv;
+            if (diff >= 7) player.lvMulti = 1.5;
+            else if (diff <= -7) player.lvMulti = 0.5;
+            else player.lvMulti = 1.0 + (diff * (0.5 / 7));
+
+            return player;
+        });
+
+        let e = { ...enemy };
         e.activeDots = [];
-        p.activeDebuffs = [];
         e.activeDebuffs = [];
-        p.pendingSkill = null; // 儲蓄中的技能
 
         // 輔助函式：取得減益倍率
         const getDebuffMulti = (target, attr) => {
@@ -112,16 +174,28 @@ document.addEventListener('DOMContentLoaded', () => {
             return multi;
         };
 
+        // 輔助函式：取得增益倍率
+        const getBuffMulti = (target, attr) => {
+            if (!target.activeBuffs) return 1.0;
+            let multi = 1.0;
+            target.activeBuffs.forEach(b => {
+                if (!b.pending && b.effect === attr) multi *= b.value;
+            });
+            return multi;
+        };
 
+        // 輔助函式：檢查是否存在特定增益
+        const hasBuff = (target, attr) => {
+            if (!target.activeBuffs) return false;
+            return target.activeBuffs.some(b => !b.pending && b.effect === attr);
+        };
 
-        // 輔助函式：取得屬性倍率 (處理多屬性情況)
+        // 輔助函式：取得屬性倍率
         const getFinalAttrMulti = (atkAttrStr, defAttrStr) => {
             if (typeof window.getAttributeMultiplier !== 'function') return 1.0;
             const atkAttrs = (atkAttrStr || '無').split(/[、,]/);
             const defAttrs = (defAttrStr || '無').split(/[、,]/);
-            let best = 1.0;
-            let worst = 1.0;
-            let hasAdv = false;
+            let best = 1.0, worst = 1.0, hasAdv = false;
             for (const aa of atkAttrs) {
                 for (const da of defAttrs) {
                     const m = window.getAttributeMultiplier(aa.trim(), da.trim());
@@ -137,14 +211,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!target.activeDots || target.activeDots.length === 0) return;
             target.activeDots.forEach(dot => {
                 if (dot.dur > 0) {
+                    const prevHp = target.hp;
                     target.hp -= dot.dmg;
                     dot.dur--;
-                    if (isVerbose) battleLog(`[${nameTag}] ${dot.name} 造成 ${Math.floor(dot.dmg).toLocaleString()} 持續傷害 (剩餘 ${dot.dur} 回合)`, 'fail');
-                    
-                    // 紀錄蓄力期間受傷
-                    if (target === p && p.pendingSkill) {
-                        p.pendingSkill.damageTaken += dot.dmg;
-                    }
+                    if (isVerbose) battleLog(`[${nameTag}] ${dot.name} 造成 ${Math.floor(dot.dmg).toLocaleString()} 持續傷害 (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(Math.max(0, target.hp)).toLocaleString()}) (剩餘 ${dot.dur} 回合)`, 'fail');
+                    if (target.pendingSkill) target.pendingSkill.damageTaken += dot.dmg;
                 }
             });
             target.activeDots = target.activeDots.filter(d => d.dur > 0);
@@ -153,9 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 輔助函式：執行 Debuff 結算
         const processDebuffs = (target, nameTag, isVerbose) => {
             if (!target.activeDebuffs || target.activeDebuffs.length === 0) return;
-            target.activeDebuffs.forEach(d => {
-                if (d.dur > 0) d.dur--;
-            });
+            target.activeDebuffs.forEach(d => { if (d.dur > 0) d.dur--; });
             const expired = target.activeDebuffs.filter(d => d.dur <= 0);
             if (isVerbose && expired.length > 0) {
                 expired.forEach(d => battleLog(`[${nameTag}] ${d.name} 效果已消失`, 'info'));
@@ -163,287 +232,241 @@ document.addEventListener('DOMContentLoaded', () => {
             target.activeDebuffs = target.activeDebuffs.filter(d => d.dur > 0);
         };
 
-        
-        // 1. 護盾減傷與生命倍化計算 (玩家生存面)
-        const bossShieldPen = e.shield_pen || 0;
-        const playerShield = p.shield || 0;
-        // 護盾減傷 = min((護盾值 - 穿透值) × 0.001, 0.99)，最低為 0
-        const pMitigation = Math.min(Math.max(0, (playerShield - bossShieldPen) * 0.001), 0.99);
-        
-        // 未減傷部分轉換為生命倍化 (100%未減傷時倍化50倍)
-        const hpMulti = (1 - pMitigation) * 50;
-        const finalHpMulti = pMitigation >= 0.99 ? 1 : hpMulti; // 護盾流(99%+)不獲得加成
-        
-        // 實際生命值 = 生命值 * (20 + (LV - 1)) * 生命倍化
-        const baseHp = p.hp || 5;
-        const lv = p.level || 1;
-        p.maxHp = baseHp * (20 + (lv - 1)) * finalHpMulti;
-        p.hp = p.maxHp;
-
-        // 2. 敵方護盾減傷計算 (玩家攻擊面)
-        const pShieldPen = p.shield_pen || 0;
-        const bossShield = e.shield || 0;
-        const eMitigation = Math.min(Math.max(0, (bossShield - pShieldPen) * 0.001), 0.99);
-
-        // 3. 攻擊倍率 (攻速闊值階梯)
-        const speedRatio = p.atk_speed / (e.atk_speed || 200);
-        const pAtkMulti = Math.max(1, Math.floor(speedRatio));
-        
-        // 4. 屬性限制
-        p.evasion = Math.min(98, p.evasion || 0);
-        e.evasion = Math.min(98, e.evasion || 0);
-        
-        // 5. 等級差距倍率 (等差傷害)
-        const pLv = p.level || 1;
-        const eLv = e.level || 1;
-        const getLvMulti = (attackerLv, defenderLv) => {
-            const diff = attackerLv - defenderLv;
-            if (diff >= 7) return 1.5;
-            if (diff <= -7) return 0.5;
-            return 1.0 + (diff * (0.5 / 7));
+        // 輔助函式：執行 Buff 結算
+        const processBuffs = (target, nameTag, isVerbose) => {
+            if (!target.activeBuffs || target.activeBuffs.length === 0) return;
+            target.activeBuffs.forEach(b => {
+                if (b.pending) {
+                    b.pending = false; // 下回合開始生效
+                } else if (b.dur > 0) {
+                    b.dur--;
+                }
+            });
+            const expired = target.activeBuffs.filter(b => b.dur <= 0 && !b.pending);
+            if (isVerbose && expired.length > 0) {
+                expired.forEach(b => battleLog(`[${nameTag}] ${b.name} 效果已消失`, 'info'));
+            }
+            target.activeBuffs = target.activeBuffs.filter(b => b.dur > 0 || b.pending);
         };
-        const pLvMulti = getLvMulti(pLv, eLv);
-        const eLvMulti = getLvMulti(eLv, pLv);
 
         let round = 1;
-        const maxRounds = 30; // 多人副本限制 30 回合
+        const maxRounds = 30;
 
         if (verbose) {
-            battleLog(`--- 戰鬥開始 (多人副本模式) ---`, 'info');
-            battleLog(`[資訊] 實際生命值: ${Math.floor(p.hp).toLocaleString()} (倍化: ${finalHpMulti.toFixed(1)}x)`, 'info');
-            battleLog(`[資訊] 玩家減傷: ${(pMitigation * 100).toFixed(1)}% | 敵方減傷: ${(eMitigation * 100).toFixed(1)}%`, 'info');
-            battleLog(`[資訊] 攻擊倍率: ${pAtkMulti}x | 攻速比: ${speedRatio.toFixed(2)}`, 'info');
-            battleLog(`[資訊] 等差倍率: 玩家 ${pLvMulti.toFixed(2)}x | 敵方 ${eLvMulti.toFixed(2)}x`, 'info');
+            battleLog(`--- 戰鬥開始 (多人副本模式: ${activePlayers.length} 人) ---`, 'info');
+            activePlayers.forEach((p, idx) => {
+                battleLog(`[玩家 ${idx+1}] 生命: ${Math.floor(p.hp).toLocaleString()} | 減傷: ${(p.mitigation * 100).toFixed(1)}% | 等差: ${p.lvMulti.toFixed(2)}x`, 'info');
+            });
             battleLog(`--------------------------------`, 'info');
         }
 
-        // 模擬戰鬥前處理 (如有 PartnerSystem)
+        // 模擬戰鬥前處理
         if (window.PartnerSystem) {
-            window.PartnerSystem.applyPreBattle(p, e);
+            activePlayers.forEach(p => window.PartnerSystem.applyPreBattle(p, e));
         }
 
-        while (p.hp > 0 && e.hp > 0 && round <= maxRounds) {
+        while (activePlayers.some(p => p.hp > 0) && e.hp > 0 && round <= maxRounds) {
             if (verbose) battleLog(`第 ${round} 回合`, 'round');
 
-            // 1. 每回合開始：計算 DOT
-            processDots(p, '玩家', verbose);
-            processDots(e, '敵方', verbose);
-            if (p.hp <= 0 || e.hp <= 0) break;
+            // 1. 每回合開始：計算 DOT 與 冷卻
+            activePlayers.forEach((p, idx) => {
+                if (p.hp > 0) {
+                    processDots(p, `玩家 ${idx+1}`, verbose);
+                    for (const sName in p.skillCDs) {
+                        if (p.skillCDs[sName] > 0) p.skillCDs[sName]--;
+                    }
+                    processDebuffs(p, `玩家 ${idx+1}`, verbose);
+                    processBuffs(p, `玩家 ${idx+1}`, verbose);
+                    
+                    // 處理待施放技能 (元素匯聚)
+                    if (p.pendingSkill) {
+                        p.pendingSkill.countdown--;
+                        if (p.pendingSkill.countdown <= 0) {
+                            const ps = p.pendingSkill;
+                            if (ps.damageTaken <= p.maxHp * 0.05) {
+                                const trueDmg = typeof ps.data.multi === 'function' ? ps.data.multi(ps.lv, p) : (ps.data.multi || 0);
+                                const prevHp = e.hp;
+                                e.hp -= trueDmg;
+                                if (verbose) battleLog(`[玩家 ${idx+1}] 💥 ${ps.name} 能量爆發！造成 ${Math.floor(trueDmg).toLocaleString()} 真實傷害 (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(Math.max(0, e.hp)).toLocaleString()})`, 'success');
+                                // CD 已在開始引導時設定
+                            } else if (verbose) {
+                                battleLog(`[玩家 ${idx+1}] ❌ ${ps.name} 蓄力失敗！`, 'fail');
+                            }
+                            p.pendingSkill = null;
+                        }
+                    }
+                }
+            });
 
-            // 2. 每回合開始：冷卻減少與 Debuff 減少
-            for (const sName in p.skillCDs) {
-                if (p.skillCDs[sName] > 0) p.skillCDs[sName]--;
-            }
-            processDebuffs(p, '玩家', verbose);
+            processDots(e, '敵方', verbose);
             processDebuffs(e, '敵方', verbose);
 
-            // 3. 每回合開始：處理待施放技能 (元素匯聚)
-            if (p.pendingSkill) {
-                p.pendingSkill.countdown--;
-                if (p.pendingSkill.countdown <= 0) {
-                    const ps = p.pendingSkill;
-                    const limit = p.maxHp * 0.05;
-                    if (ps.damageTaken <= limit) {
-                        // 觸發真實傷害
-                        const sData = ps.data;
-                        const sLv = ps.lv;
-                        const trueDmg = typeof sData.multi === 'function' ? sData.multi(sLv, p) : (sData.multi || 0);
-                        
-                        e.hp -= trueDmg;
-                        if (verbose) battleLog(`[玩家] 💥 ${ps.name} 能量爆發！造成 ${Math.floor(trueDmg).toLocaleString()} 真實傷害 (累積受傷: ${Math.floor(ps.damageTaken).toLocaleString()})`, 'success');
-                    } else if (verbose) {
-                        battleLog(`[玩家] ❌ ${ps.name} 蓄力失敗！受傷過多 (${Math.floor(ps.damageTaken).toLocaleString()} > 5% HP)`, 'fail');
-                    }
-                    p.pendingSkill = null;
-                }
-            }
+            if (!activePlayers.some(p => p.hp > 0) || e.hp <= 0) break;
 
-            // 判斷手順：攻速高者先攻
-            const playerFirst = (p.atk_speed || 0) >= (e.atk_speed || 0);
-            const attackers = playerFirst ? ['player', 'enemy'] : ['enemy', 'player'];
+            // 2. 玩家行動 (每個人動一次)
+            activePlayers.forEach((p, idx) => {
+                if (p.hp <= 0 || e.hp <= 0) return;
 
-            for (const type of attackers) {
-                // 即時計算受 Debuff 影響的數值
-                const pAtk = p.attack * getDebuffMulti(p, 'attack');
-                const pSpeed = p.atk_speed * getDebuffMulti(p, 'speed');
-                const pEva = p.evasion * getDebuffMulti(p, 'evasion');
-                
-                const eAtk = e.attack * getDebuffMulti(e, 'attack');
+                const pAtk = p.attack * getDebuffMulti(p, 'attack') * getBuffMulti(p, 'attack');
                 const eSpeed = e.atk_speed * getDebuffMulti(e, 'speed');
                 const eEva = e.evasion * getDebuffMulti(e, 'evasion');
 
-                if (type === 'player') {
-                    // 隨機選擇可用技能
-                    const available = p.ownedSkills.filter(s => (p.skillCDs[s.name] || 0) === 0);
-                    let skillToUse = null;
-                    if (available.length > 0) {
-                        skillToUse = available[Math.floor(Math.random() * available.length)];
+                // 針對當前玩家計算敵方減傷
+                const currentEMitigation = Math.min(Math.max(0, ((e.shield || 0) - (p.shield_pen || 0)) * 0.001), 0.99);
+
+                const available = p.ownedSkills.filter(s => (p.skillCDs[s.name] || 0) === 0);
+                let skillToUse = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : { name: '普攻', lv: 1, data: ATTACK_SKILLS_DATA['普攻'], type: 'attack' };
+
+                const pHitRate = (p.hit_rate || 100) * getBuffMulti(p, 'hit_rate');
+                let p_hit = pHitRate - eEva - ((e.luck || 0) * 0.004);
+                p_hit = Math.max(2, p_hit);
+
+                if (skillToUse.type === 'heal') {
+                    const sData = skillToUse.data;
+                    const sLv = skillToUse.lv;
+                    const healPercent = typeof sData.multi === 'function' ? sData.multi(sLv, p) : (sData.multi || 0);
+                    
+                    activePlayers.forEach((targetP, targetIdx) => {
+                        if (targetP.hp <= 0) return;
+                        const healAmt = targetP.maxHp * (healPercent / 100);
+                        const prevHp = targetP.hp;
+                        targetP.hp = Math.min(targetP.maxHp, targetP.hp + healAmt);
+                        if (verbose) battleLog(`[玩家 ${idx+1}] 使用 ${skillToUse.name}！為 玩家 ${targetIdx+1} 恢復 ${Math.floor(healAmt).toLocaleString()} 生命 (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(targetP.hp).toLocaleString()})`, 'success');
+                    });
+                    p.skillCDs[skillToUse.name] = (sData.cd || 0) + 1;
+                } else if (skillToUse.type === 'buff') {
+                    const sData = skillToUse.data;
+                    const sLv = skillToUse.lv;
+                    const bValue = typeof sData.multi === 'function' ? sData.multi(sLv, p) : (sData.multi || 1.0);
+                    
+                    p.activeBuffs.push({
+                        name: skillToUse.name,
+                        effect: sData.effect,
+                        value: bValue,
+                        dur: sData.dur,
+                        pending: true
+                    });
+                    
+                    if (verbose) battleLog(`[玩家 ${idx+1}] 使用 ${skillToUse.name}！(將於下回合生效，持續 ${sData.dur} 回合)`, 'info');
+                    p.skillCDs[skillToUse.name] = (sData.cd || 0) + 1;
+                } else if (Math.random() * 100 < p_hit) {
+                    const sData = skillToUse.data;
+                    const sLv = skillToUse.lv;
+                    
+                    if (skillToUse.name === '元素匯聚' || skillToUse.name === '元素匯聚．強') {
+                        p.pendingSkill = { name: skillToUse.name, lv: sLv, data: sData, countdown: 2, damageTaken: 0 };
+                        p.skillCDs[skillToUse.name] = (sData.cd || 0) + 1;
+                        if (verbose) battleLog(`[玩家 ${idx+1}] 開始引導 ${skillToUse.name}...`, 'info');
                     } else {
-                        skillToUse = { name: '普攻', lv: 1, data: ATTACK_SKILLS_DATA['普攻'] };
-                    }
-
-                    // 命中率 = 攻擊方命中 - 防守方迴避 - (防守方運氣值 × 0.004)
-                    let p_hit = (p.hit_rate || 100) - eEva - ((e.luck || 0) * 0.004);
-                    p_hit = Math.max(2, p_hit); // 最低命中 2%
-
-                    if (Math.random() * 100 < p_hit) {
-                        const sData = skillToUse.data;
-                        const sLv = skillToUse.lv;
-                        
-                        // 特殊處理：元素匯聚蓄力邏輯
-                        if (skillToUse.name === '元素匯聚' || skillToUse.name === '元素匯聚．強') {
-                            p.pendingSkill = {
-                                name: skillToUse.name,
-                                lv: sLv,
-                                data: sData,
-                                countdown: 2,
-                                damageTaken: 0
-                            };
-                            p.skillCDs[skillToUse.name] = sData.cd;
-                            if (verbose) battleLog(`[玩家] 開始引導 ${skillToUse.name}... (等待 2 回合，期間受傷不得超過 5% HP)`, 'info');
-                            continue; // 本回合不造成傷害
-                        }
-
-                        // 技能倍率
-                        let sMulti = 1.0;
-                        if (typeof sData.multi === 'function') {
-                            sMulti = sData.multi(sLv, p);
-                        } else {
-                            sMulti = sData.multi || 1.0;
-                        }
-
-                        // 屬性倍率
+                        let sMulti = typeof sData.multi === 'function' ? sData.multi(sLv, p) : (sData.multi || 1.0);
                         const attrMulti = getFinalAttrMulti(sData.attr, e.attribute);
-                        let attrInfo = "";
-                        if (attrMulti > 1) {
-                            attrInfo = ` <span style="color:#ffeb3b; font-size:0.8rem;">[屬性優勢 ${attrMulti.toFixed(2)}x]</span>`;
-                        } else if (attrMulti < 1) {
-                            attrInfo = ` <span style="color:#ff5722; font-size:0.8rem;">[屬性劣勢 ${attrMulti.toFixed(2)}x]</span>`;
-                        }
-
-                        // 攻速倍率 (依據受減益後的數值)
-                        const currentSpeedRatio = pSpeed / (eSpeed || 200);
-                        const currentPAtkMulti = Math.max(1, Math.floor(currentSpeedRatio));
-
-                        const pBonusMulti = 1 + (p.bonus_dmg || 0) / 100;
-                        let damage = pAtk * sMulti * pBonusMulti * currentPAtkMulti * pLvMulti * attrMulti;
-                        // 套用敵方護盾減傷
-                        damage = damage * (1 - eMitigation);
+                        const currentPAtkMulti = Math.max(1, Math.floor((p.atk_speed * getBuffMulti(p, 'speed') * getDebuffMulti(p, 'speed')) / (eSpeed || 200)));
+                        
+                        let damage = pAtk * sMulti * (1 + (p.bonus_dmg || 0) / 100) * currentPAtkMulti * p.lvMulti * attrMulti * (1 - currentEMitigation);
+                        const prevHp = e.hp;
                         e.hp -= damage;
 
-                        // DOT/Debuff 施加
-                        if (typeof DOT_SKILLS_DATA !== 'undefined' || typeof DEBUFF_SKILLS_DATA !== 'undefined') {
-                            // DOT
-                            if (sData.dotnum) {
-                                const dotKey = Object.keys(DOT_SKILLS_DATA).find(k => DOT_SKILLS_DATA[k].dotnum === sData.dotnum);
-                                if (dotKey) {
-                                    const dotData = DOT_SKILLS_DATA[dotKey];
-                                    e.activeDots.push({ name: dotKey, dmg: dotData.dmg(sLv), dur: dotData.dur });
-                                }
-                            }
-                            // Debuff (排除厄水 4)
-                            if (sData.deffnum && sData.deffnum !== 4) {
-                                const debuffKey = Object.keys(DEBUFF_SKILLS_DATA).find(k => DEBUFF_SKILLS_DATA[k].debuffnum === sData.deffnum);
-                                if (debuffKey) {
-                                    const dData = DEBUFF_SKILLS_DATA[debuffKey];
-                                    if (Math.random() * 100 < dData.prob) {
-                                        e.activeDebuffs.push({ 
-                                            name: debuffKey, 
-                                            attr: dData.attr, 
-                                            effect: dData.effect, 
-                                            dur: dData.dur 
-                                        });
-                                        if (verbose) battleLog(`[敵方] 受到 ${debuffKey} 影響！(降低 ${dData.attr} ${Math.floor(dData.effect*100)}%)`, 'fail');
-                                    }
-                                }
+                        // DOT/Debuff
+                        if (sData.dotnum) {
+                            const dotKey = Object.keys(DOT_SKILLS_DATA).find(k => DOT_SKILLS_DATA[k].dotnum === sData.dotnum);
+                            if (dotKey) e.activeDots.push({ name: dotKey, dmg: DOT_SKILLS_DATA[dotKey].dmg(sLv), dur: DOT_SKILLS_DATA[dotKey].dur });
+                        }
+                        if (sData.deffnum && sData.deffnum !== 4) {
+                            const debuffKey = Object.keys(DEBUFF_SKILLS_DATA).find(k => DEBUFF_SKILLS_DATA[k].debuffnum === sData.deffnum);
+                            if (debuffKey && Math.random() * 100 < DEBUFF_SKILLS_DATA[debuffKey].prob) {
+                                e.activeDebuffs.push({ ...DEBUFF_SKILLS_DATA[debuffKey], name: debuffKey });
+                                if (verbose) battleLog(`[敵方] 受到 ${debuffKey} 影響`, 'fail');
                             }
                         }
 
-                        // 冷卻開始
-                        if (skillToUse.name !== '普攻') {
-                            p.skillCDs[skillToUse.name] = sData.cd;
-                        }
-
-                        if (verbose) battleLog(`[玩家] 使用 ${skillToUse.name}${attrInfo}！造成 ${Math.floor(damage).toLocaleString()} 傷害 (敵方剩餘: ${Math.max(0, e.hp).toLocaleString()})`, 'player');
-                    } else if (verbose) {
-                        battleLog(`[玩家] ${skillToUse.name} 被閃避！`, 'player');
+                        
+                        p.skillCDs[skillToUse.name] = (sData.cd || 0) + 1;
+                        if (verbose) battleLog(`[玩家 ${idx+1}] 使用 ${skillToUse.name}！造成 ${Math.floor(damage).toLocaleString()} 傷害 (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(Math.max(0, e.hp)).toLocaleString()})`, 'player');
                     }
-                } else {
+                } else if (verbose) {
+                    battleLog(`[玩家 ${idx+1}] ${skillToUse.name} 被閃避！`, 'player');
+                }
+            });
 
-                    // 敵方攻擊命中率
+            // 3. 敵方行動 (同時攻擊所有玩家)
+            if (e.hp > 0) {
+                const eAtk = e.attack * getDebuffMulti(e, 'attack');
+                activePlayers.forEach((p, idx) => {
+                    if (p.hp <= 0) return;
+
+                    const pEva = p.evasion * getDebuffMulti(p, 'evasion') * getBuffMulti(p, 'evasion');
                     let e_hit = (e.hit_rate || 100) - pEva - ((p.luck || 0) * 0.004);
-                    e_hit = Math.max(2, e_hit); // 最低命中 2%
+                    e_hit = Math.max(2, e_hit);
 
                     if (Math.random() * 100 < e_hit) {
-                        // 敵方屬性倍率
-                        const attrMulti = getFinalAttrMulti(e.attribute, '無'); // 假設玩家無屬性
-                        let attrInfo = "";
-                        if (attrMulti > 1) {
-                            attrInfo = ` <span style="color:#ffeb3b; font-size:0.8rem;">[屬性優勢 ${attrMulti.toFixed(2)}x]</span>`;
-                        } else if (attrMulti < 1) {
-                            attrInfo = ` <span style="color:#ff5722; font-size:0.8rem;">[屬性劣勢 ${attrMulti.toFixed(2)}x]</span>`;
-                        }
-
-                        let rawDamage = eAtk * eLvMulti * attrMulti;
-                        // 套用玩家護盾減傷
-                        let damage = rawDamage * (1 - pMitigation);
+                        const attrMulti = getFinalAttrMulti(e.attribute, '無');
+                        const diff = e.level - p.level;
+                        const eLvMultiForP = diff >= 7 ? 1.5 : (diff <= -7 ? 0.5 : 1.0 + (diff * (0.5 / 7)));
+                        
+                        const eRandomMulti = 1 + Math.random() * 2;
+                        const currentPMitigation = hasBuff(p, 'invincible') ? 1.0 : p.mitigation;
+                        let damage = eAtk * eLvMultiForP * attrMulti * (1 - currentPMitigation) * eRandomMulti;
+                        const prevHp = p.hp;
                         p.hp -= damage;
-
-                        // 紀錄蓄力期間受傷
-                        if (p.pendingSkill) {
-                            p.pendingSkill.damageTaken += damage;
-                        }
-
-                        if (verbose) battleLog(`[敵方] 擊中${attrInfo}！造成 ${Math.floor(damage).toLocaleString()} 傷害 (玩家剩餘: ${Math.max(0, p.hp).toLocaleString()})`, 'enemy');
+                        if (p.pendingSkill) p.pendingSkill.damageTaken += damage;
+                        
+                        if (verbose) battleLog(`[敵方] 擊中 玩家 ${idx+1}！造成 ${Math.floor(damage).toLocaleString()} 傷害 (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(Math.max(0, p.hp)).toLocaleString()})`, 'enemy');
                     } else if (verbose) {
-                        battleLog(`[敵方] 被閃避！`, 'enemy');
+                        battleLog(`[敵方] 對 玩家 ${idx+1} 的攻擊被閃避！`, 'enemy');
                     }
-                }
-
-
-
-                if (p.hp <= 0 || e.hp <= 0) break;
+                });
             }
 
             round++;
         }
 
         const win = e.hp <= 0;
+        const playerStatus = activePlayers.map((p, idx) => ({
+            name: `玩家 ${idx + 1}`,
+            hp: Math.max(0, p.hp),
+            isAlive: p.hp > 0
+        }));
+
         if (verbose) {
-            if (win) {
-                battleLog(`🏆 戰鬥勝利！於第 ${round-1} 回合擊殺。`, 'success');
-            } else if (round > maxRounds) {
-                battleLog(`⏳ 已達 30 回合上限，玩家落敗。`, 'fail');
-            } else {
-                battleLog(`💀 戰鬥失敗... 角色死亡。`, 'fail');
-            }
+            if (win) battleLog(`🏆 戰鬥勝利！於第 ${round-1} 回合擊殺。`, 'success');
+            else if (round > maxRounds) battleLog(`⏳ 已達 30 回合上限，玩家落敗。`, 'fail');
+            else battleLog(`💀 戰鬥失敗... 全員陣亡。`, 'fail');
+
+            const statusLine = playerStatus.map(ps => 
+                `${ps.name}: ${ps.isAlive ? `存活 (${Math.floor(ps.hp).toLocaleString()})` : '陣亡'}`
+            ).join(' | ');
+            battleLog(`[存活狀況] ${statusLine}`, 'info');
         }
-        return win;
+        return { win, playerStatus };
     }
 
-    function getPlayerStats() {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        let stats = window.CHARACTER_DEFAULT_STATS || { 
-            level: 1, hp: 5, attack: 100, shield: 0, hit_rate: 100, evasion: 0, atk_speed: 100
-        };
-        
-        if (saved) {
-            try {
-                stats = { ...stats, ...JSON.parse(saved) };
-            } catch (e) {
-                console.error("Error parsing player stats", e);
+    function getMultiPlayerStats() {
+        const players = [];
+        for (let i = 1; i <= 3; i++) {
+            const saved = localStorage.getItem(`sfl_battle_stats_${i}`);
+            let stats = { ...window.CHARACTER_DEFAULT_STATS };
+            if (i > 1) stats.isEnabled = false; // P2, P3 預設不加入
+            
+            if (saved) {
+                try {
+                    stats = { ...stats, ...JSON.parse(saved) };
+                } catch (e) {}
+            }
+            
+            if (stats.isEnabled) {
+                players.push(stats);
             }
         }
-        return stats;
+        return players;
     }
 
     // 5. 事件處理
     singleBtn.onclick = () => {
         if (!currentEnemy || isRunning) return;
         logDisplay.innerHTML = '';
-        const player = getPlayerStats();
-        runBattle(player, currentEnemy, true);
-        updateStats(0, 0); // 單次測試不計入統計
+        const players = getMultiPlayerStats();
+        runBattle(players, currentEnemy, true);
+        updateStats(0, 0);
     };
 
     startBtn.onclick = async () => {
@@ -458,17 +481,21 @@ document.addEventListener('DOMContentLoaded', () => {
         logDisplay.innerHTML = `<div class="log-entry log-info">開始執行 ${count} 次連續挑戰...</div>`;
         
         let wins = 0;
-        const player = getPlayerStats();
+        const players = getMultiPlayerStats();
+        const survivalCounts = players.map(() => 0);
 
         for (let i = 1; i <= count; i++) {
-            const result = runBattle(player, currentEnemy, false);
-            if (result) wins++;
+            const { win, playerStatus } = runBattle(players, currentEnemy, false);
+            if (win) wins++;
+            playerStatus.forEach((ps, idx) => {
+                if (ps.isAlive) survivalCounts[idx]++;
+            });
 
             if (i % 10 === 0 || i === count) {
                 updateStats(wins, i);
                 if (i % 100 === 0) {
                     battleLog(`已完成 ${i}/${count} 次挑戰...`, 'info');
-                    await new Promise(resolve => setTimeout(resolve, 10)); // 防止瀏覽器當掉
+                    await new Promise(resolve => setTimeout(resolve, 10));
                 }
             }
         }
@@ -477,7 +504,12 @@ document.addEventListener('DOMContentLoaded', () => {
         battleLog(`挑戰結束！`, 'success');
         battleLog(`總場次：${count}`, 'info');
         battleLog(`勝場數：${wins}`, 'success');
-        battleLog(`勝率：${(wins / count * 100).toFixed(2)}%`, 'info');
+        battleLog(`勝率：${((wins / count) * 100).toFixed(2)}%`, 'info');
+        
+        const survivalLines = survivalCounts.map((c, idx) => 
+            `玩家 ${idx + 1} 存活率：${((c / count) * 100).toFixed(1)}% (${c}次)`
+        ).join(' | ');
+        battleLog(`[平均存活] ${survivalLines}`, 'info');
         
         isRunning = false;
         startBtn.disabled = false;

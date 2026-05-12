@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SFL 多人戰鬥模擬器 - 綜合面板</title>
+    <title>SFL 多人副本模擬器</title>
     <meta name="description" content="SFL 角色設定與多人關卡模擬戰鬥系統">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,7 +38,7 @@
 
         .app-header {
             text-align: center;
-            margin-bottom: 50px;
+            margin-bottom: 20px;
             animation: fadeInDown 0.8s ease-out;
         }
 
@@ -61,7 +61,7 @@
             display: flex;
             justify-content: center;
             gap: 15px;
-            margin-bottom: 40px;
+            margin-bottom: 15px;
         }
 
         .tab-btn {
@@ -103,7 +103,7 @@
             background: var(--card-bg);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 20px;
-            padding: 30px;
+            padding: 20px;
             backdrop-filter: blur(10px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             margin-bottom: 30px;
@@ -113,9 +113,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
+            margin-bottom: 15px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 15px;
+            padding-bottom: 10px;
         }
 
         .card-header h2 {
@@ -129,6 +129,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 25px;
+            justify-content: center;
         }
 
         .enemy-card {
@@ -218,19 +219,19 @@
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 20px;
+            gap: 12px;
         }
 
         .input-group label {
             display: block;
             color: #888;
             font-size: 0.85rem;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .input-group input {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             background: #0a0c12;
             border: 1px solid #333;
             border-radius: 8px;
@@ -316,12 +317,11 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1>SFL 多人戰鬥模擬器</h1>
+            <h1>SFL 多人副本模擬器</h1>
             <nav class="tabs">
                 <div class="tab-btn active" data-view="view-character">角色能力設定</div>
                 <div class="tab-btn" data-view="view-dungeon">模擬戰鬥</div>
             </nav>
-            <p id="app-subtitle">即時演算法驗證與極限挑戰系統</p>
         </header>
 
         <main>
@@ -329,12 +329,31 @@
             <section id="view-character" class="view-content active">
                 <div class="card">
                     <div class="card-header">
-                        <h2>角色基本能力值</h2>
-                        <div style="display: flex; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <h2 style="margin:0;">角色能力設定</h2>
+                            <div class="player-selector"
+                                style="display: flex; gap: 5px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 10px;">
+                                <button class="btn player-tab active" data-player="1">玩家 1</button>
+                                <button class="btn player-tab" data-player="2">玩家 2</button>
+                                <button class="btn player-tab" data-player="3">玩家 3</button>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <div id="join-toggle-container"
+                                style="display: none; align-items: center; gap: 8px; margin-right: 10px; background: rgba(255,255,255,0.05); padding: 5px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                                <label
+                                    style="font-size: 0.9rem; color: #aaa; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                    <input type="checkbox" id="join-combat-toggle"
+                                        style="width: 18px; height: 18px; cursor: pointer;">
+                                    加入戰鬥
+                                </label>
+                            </div>
                             <button id="reset-btn" class="btn secondary">恢復預設</button>
                             <button id="save-btn" class="btn primary">保存設定</button>
                         </div>
                     </div>
+                    <p style="color: #f44747; font-size: 0.85rem; margin: -5px 0 15px 0; font-weight: bold;">※
+                        設定能力或勾選加入戰鬥後，要按「保存設定」才會正確套用數據</p>
                     <form id="stats-form" class="stats-grid">
                         <div class="input-group"><label>等級</label><input type="number" id="level"></div>
                         <div class="input-group"><label>生命基值</label><input type="number" id="hp"></div>
@@ -352,6 +371,8 @@
                     <div class="card-header">
                         <h2>技能等級設定</h2>
                     </div>
+                    <p style="color: #f44747; font-size: 0.85rem; margin: -5px 0 15px 0; font-weight: bold;">※
+                        設定能力後，要按「保存設定」才會正確套用數據</p>
                     <form id="skills-form" class="stats-grid">
                         <div class="input-group"><label>斬擊</label><input type="number" id="斬擊" min="0"></div>
                         <div class="input-group"><label>火球術</label><input type="number" id="火球術" min="0"></div>
@@ -388,13 +409,9 @@
                         <div class="input-group"><label>不滅意志</label><input type="number" id="不滅意志" min="0"></div>
                         <div class="input-group"><label>天雷神轟鳴</label><input type="number" id="天雷神轟鳴" min="0"></div>
                         <div class="input-group"><label>厄水侵蝕</label><input type="number" id="厄水侵蝕" min="0"></div>
-                        <div class="input-group"><label>靈魂庇佑</label><input type="number" id="靈魂庇佑" min="0"></div>
-                        <div class="input-group"><label>野蠻震盪</label><input type="number" id="野蠻震盪" min="0"></div>
-                        <div class="input-group"><label>終絕爆破</label><input type="number" id="終絕爆破" min="0"></div>
                         <div class="input-group"><label>星辰墜落</label><input type="number" id="星辰墜落" min="0"></div>
                         <div class="input-group"><label>宙序裁決</label><input type="number" id="宙序裁決" min="0"></div>
                         <div class="input-group"><label>星界終焉</label><input type="number" id="星界終焉" min="0"></div>
-                        <div class="input-group"><label>艦船冷卻加成</label><input type="number" id="艦船冷卻加成" min="0"></div>
                     </form>
                 </div>
             </section>
@@ -493,7 +510,7 @@
         });
     </script>
 
-    <!-- 載入原始邏輯 (需微調路徑) -->
+    <!-- 載入角色邏輯 (三個玩家共用邏輯或個別引入) -->
     <script src="character/character.js"></script>
     <script src="dungeon/dungeon.js"></script>
 </body>

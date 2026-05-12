@@ -38,11 +38,11 @@ const ATTACK_SKILLS_DATA = {
 };
 
 const BUFF_SKILLS_DATA = {
-    '狂戰': { attr: '增益', ub: 0, cd: 6, effect: 'attack', multi: (lv) => 0.95 + lv * 0.15, dur: 3 },
-    '閃避': { attr: '增益', ub: 1, cd: 999, effect: 'evasion', multi: (lv) => 1.90 + lv * 2.00, dur: 1 },
+    '狂戰': { attr: '增益', ub: 0, cd: 6, effect: 'attack', multi: (lv) => 1.17 + lv * 0.03, dur: 3 },
+    '閃避': { attr: '增益', ub: 1, cd: 999, effect: 'evasion', multi: (lv) => 1.90 + lv * 0.1, dur: 1 },
     '神聖護盾': { attr: '抵禦', ub: 3, cd: 999, effect: 'invincible', multi: (lv) => 1, dur: 2 },
     '會心': { attr: '增益', ub: 0, cd: 4, effect: 'hit_rate', multi: (lv) => 1.00 + lv * 0.01, dur: 3 },
-    '靈魂庇佑': { attr: '輔助', ub: 2, cd: 3, effect: 'resistance', prob: (lv) => 0.00 + lv * 1.00, dur: 3 },
+    //'靈魂庇佑': { attr: '輔助', ub: 2, cd: 3, effect: 'resistance', prob: (lv) => 0.00 + lv * 1.00, dur: 3 },
 };
 
 const OTHER_SKILLS_DATA = {

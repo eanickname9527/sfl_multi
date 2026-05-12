@@ -1,12 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('save-btn');
     const statsForm = document.getElementById('stats-form');
+    const skillsForm = document.getElementById('skills-form');
     const toast = document.getElementById('toast');
+    const playerTabs = document.querySelectorAll('.player-tab');
+    const joinToggleContainer = document.getElementById('join-toggle-container');
+    const joinCombatToggle = document.getElementById('join-combat-toggle');
 
-    const STORAGE_KEY = 'sfl_battle_stats';
+    let currentPlayer = 1;
+    const getStorageKey = (p) => `sfl_battle_stats_${p}`;
 
     // 能力與技能預設值
     const DEFAULT_STATS = {
+        isEnabled: true, // 預設 P1 是啟用的
         level: 429,
         hp: 465,
         attack: 650,
@@ -30,51 +36,95 @@ document.addEventListener('DOMContentLoaded', () => {
         '靈魂庇佑': 0, '野蠻震盪': 0, '終絕爆破': 0, '星辰墜落': 25, '宙序裁決': 25,
         '星界終焉': 0, '艦船冷卻加成': 0
     };
+    
+    // P2, P3 預設不加入
+    const DEFAULT_STATS_P2 = { ...DEFAULT_STATS, isEnabled: false };
+    const DEFAULT_STATS_P3 = { ...DEFAULT_STATS, isEnabled: false };
+
     window.CHARACTER_DEFAULT_STATS = DEFAULT_STATS;
 
-    const statKeys = Object.keys(DEFAULT_STATS);
+    const statKeys = Object.keys(DEFAULT_STATS).filter(k => k !== 'isEnabled');
 
-    function loadStats() {
-        const savedData = localStorage.getItem(STORAGE_KEY);
-        let stats = DEFAULT_STATS;
+    function loadPlayerStats(playerNum) {
+        const savedData = localStorage.getItem(getStorageKey(playerNum));
+        let stats = playerNum === 1 ? DEFAULT_STATS : (playerNum === 2 ? DEFAULT_STATS_P2 : DEFAULT_STATS_P3);
 
         if (savedData) {
             try {
                 const parsed = JSON.parse(savedData);
-                // 合併現有資料與預設值（確保新欄位也能有預設值）
-                stats = { ...DEFAULT_STATS, ...parsed };
+                stats = { ...stats, ...parsed };
             } catch (e) {
-                console.error('Error loading stats:', e);
+                console.error(`Error loading stats for P${playerNum}:`, e);
             }
         }
 
-        // 填入表單
+        // 更新 UI
         statKeys.forEach(key => {
             const input = document.getElementById(key);
             if (input) {
-                // 如果是空值或 undefined，使用預設值
-                input.value = (stats[key] !== undefined && stats[key] !== '') ? stats[key] : DEFAULT_STATS[key];
+                input.value = (stats[key] !== undefined && stats[key] !== '') ? stats[key] : stats[key];
             }
         });
+
+        // 處理加入開關
+        if (playerNum > 1) {
+            joinToggleContainer.style.display = 'flex';
+            joinCombatToggle.checked = !!stats.isEnabled;
+        } else {
+            joinToggleContainer.style.display = 'none';
+        }
     }
 
-    function saveStats(e) {
+    function saveCurrentPlayerStats(e) {
         if (e) e.preventDefault();
-        const savedData = localStorage.getItem(STORAGE_KEY);
+        
+        const savedData = localStorage.getItem(getStorageKey(currentPlayer));
         let currentStats = {};
         if (savedData) {
             try { currentStats = JSON.parse(savedData); } catch (e) { }
         }
 
         const stats = { ...currentStats };
+        
+        // 取得基本數值
         statKeys.forEach(key => {
             const input = document.getElementById(key);
             if (input) {
-                stats[key] = input.value !== '' ? Number(input.value) : DEFAULT_STATS[key];
+                stats[key] = input.value !== '' ? Number(input.value) : stats[key];
             }
         });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
-        showToast();
+
+        // 取得開關數值
+        if (currentPlayer > 1) {
+            stats.isEnabled = joinCombatToggle.checked;
+        } else {
+            stats.isEnabled = true; // P1 總是啟用
+        }
+
+        localStorage.setItem(getStorageKey(currentPlayer), JSON.stringify(stats));
+        showToast(`玩家 ${currentPlayer} 設定已保存！`);
+    }
+
+    function switchPlayer(playerNum) {
+        // 先存目前的
+        // saveCurrentPlayerStats(); // 不自動存，讓使用者點保存
+
+        currentPlayer = playerNum;
+        
+        // 更新 Tab 樣式
+        playerTabs.forEach(btn => {
+            if (parseInt(btn.dataset.player) === playerNum) {
+                btn.classList.add('active');
+                btn.style.background = 'var(--accent-color)';
+                btn.style.color = '#000';
+            } else {
+                btn.classList.remove('active');
+                btn.style.background = 'transparent';
+                btn.style.color = '#888';
+            }
+        });
+
+        loadPlayerStats(playerNum);
     }
 
     function showToast(message = '設定已保存！') {
@@ -84,20 +134,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetStats() {
-        if (confirm('確定要將所有能力值恢復到預設嗎？這將會清除目前的所有設定並重新讀取系統預設值。')) {
-            // 直接將系統預設值寫入 localStorage，避免需要額外點擊保存
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_STATS));
-            // 重新整理頁面以更新 UI 並讀取最新的系統邏輯 (加入時間戳強制重新載入，避免快取問題)
-            window.location.href = window.location.pathname + '?t=' + Date.now();
+        if (confirm(`確定要將 玩家 ${currentPlayer} 的能力值恢復到預設嗎？`)) {
+            const def = currentPlayer === 1 ? DEFAULT_STATS : (currentPlayer === 2 ? DEFAULT_STATS_P2 : DEFAULT_STATS_P3);
+            localStorage.setItem(getStorageKey(currentPlayer), JSON.stringify(def));
+            loadPlayerStats(currentPlayer);
+            showToast(`玩家 ${currentPlayer} 已恢復預設`);
         }
     }
+
+    // 事件監聽
+    playerTabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchPlayer(parseInt(btn.dataset.player));
+        });
+    });
 
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn) resetBtn.addEventListener('click', resetStats);
 
-    saveBtn.addEventListener('click', saveStats);
-    statsForm.addEventListener('submit', saveStats);
-    const skillsForm = document.getElementById('skills-form');
-    if (skillsForm) skillsForm.addEventListener('submit', saveStats);
-    loadStats();
+    saveBtn.addEventListener('click', saveCurrentPlayerStats);
+    statsForm.addEventListener('submit', saveCurrentPlayerStats);
+    if (skillsForm) skillsForm.addEventListener('submit', saveCurrentPlayerStats);
+
+    // 初始載入玩家 1
+    switchPlayer(1);
 });
