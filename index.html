@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SFL 多人戰鬥模擬器 - 綜合面板</title>
+    <meta name="description" content="SFL 角色設定與多人關卡模擬戰鬥系統">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --primary-glow: rgba(78, 201, 176, 0.3);
+            --accent-color: #4ec9b0;
+            --bg-dark: #0f111a;
+            --card-bg: rgba(30, 33, 45, 0.8);
+        }
+
+        body {
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-dark);
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .app-header h1 {
+            font-size: 3rem;
+            background: linear-gradient(135deg, #4ec9b0 0%, #6200ea 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .app-header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+
+        /* 導航分頁 */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888;
+            padding: 12px 30px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        /* 視圖切換 */
+        .view-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .view-content.active {
+            display: block;
+        }
+
+        /* 通用卡片樣式 */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            margin-bottom: 30px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            color: #fff;
+            font-size: 1.5rem;
+        }
+
+        /* 敵人選擇區 */
+        #enemy-selection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .enemy-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 25px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .enemy-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent-color);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px var(--primary-glow);
+        }
+
+        /* 戰鬥實況戰報 */
+        .battle-log-area {
+            background: #0a0c12;
+            border-radius: 20px;
+            border: 1px solid #1e212d;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .log-header {
+            padding: 15px 25px;
+            background: #161922;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .log-content {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #d4d4d4;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 5px;
+        }
+
+        .log-success {
+            color: #4ec9b0;
+        }
+
+        .log-fail {
+            color: #f44747;
+        }
+
+        .log-info {
+            color: #9cdcfe;
+        }
+
+        .log-player {
+            color: #4ec9b0;
+        }
+
+        .log-enemy {
+            color: #ffab91;
+        }
+
+        .log-round {
+            color: #ce9178;
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 5px 0;
+            border-bottom: 1px solid #333;
+            font-size: 1.1rem;
+        }
+
+        /* 角色設定表格 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            background: #0a0c12;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .btn.primary {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .btn.secondary {
+            background: transparent;
+            border: 1px solid #444;
+            color: #aaa;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #10b981;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 隱藏原生連結樣式 */
+        a.tab-btn {
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>SFL 多人戰鬥模擬器</h1>
+            <nav class="tabs">
+                <div class="tab-btn active" data-view="view-character">角色能力設定</div>
+                <div class="tab-btn" data-view="view-dungeon">模擬戰鬥</div>
+            </nav>
+            <p id="app-subtitle">即時演算法驗證與極限挑戰系統</p>
+        </header>
+
+        <main>
+            <!-- 視圖 1: 角色設定 -->
+            <section id="view-character" class="view-content active">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>角色基本能力值</h2>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="reset-btn" class="btn secondary">恢復預設</button>
+                            <button id="save-btn" class="btn primary">保存設定</button>
+                        </div>
+                    </div>
+                    <form id="stats-form" class="stats-grid">
+                        <div class="input-group"><label>等級</label><input type="number" id="level"></div>
+                        <div class="input-group"><label>生命基值</label><input type="number" id="hp"></div>
+                        <div class="input-group"><label>攻擊力</label><input type="number" id="attack"></div>
+                        <div class="input-group"><label>護盾值</label><input type="number" id="shield"></div>
+                        <div class="input-group"><label>迴避率</label><input type="number" id="evasion"></div>
+                        <div class="input-group"><label>命中率</label><input type="number" id="hit_rate"></div>
+                        <div class="input-group"><label>額外傷害</label><input type="number" id="bonus_dmg"></div>
+                        <div class="input-group"><label>運氣值</label><input type="number" id="luck"></div>
+                        <div class="input-group"><label>攻擊速度</label><input type="number" id="atk_speed"></div>
+                        <div class="input-group"><label>護盾穿透</label><input type="number" id="shield_pen"></div>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>技能等級設定</h2>
+                    </div>
+                    <form id="skills-form" class="stats-grid">
+                        <div class="input-group"><label>斬擊</label><input type="number" id="斬擊" min="0"></div>
+                        <div class="input-group"><label>火球術</label><input type="number" id="火球術" min="0"></div>
+                        <div class="input-group"><label>暗影突襲</label><input type="number" id="暗影突襲" min="0"></div>
+                        <div class="input-group"><label>緊急治療</label><input type="number" id="緊急治療" min="0"></div>
+                        <div class="input-group"><label>狂戰</label><input type="number" id="狂戰" min="0"></div>
+                        <div class="input-group"><label>烈火箭</label><input type="number" id="烈火箭" min="0"></div>
+                        <div class="input-group"><label>石破</label><input type="number" id="石破" min="0"></div>
+                        <div class="input-group"><label>詛咒打擊</label><input type="number" id="詛咒打擊" min="0"></div>
+                        <div class="input-group"><label>毒刃</label><input type="number" id="毒刃" min="0"></div>
+                        <div class="input-group"><label>烈焰劍</label><input type="number" id="烈焰劍" min="0"></div>
+                        <div class="input-group"><label>靈性冥視</label><input type="number" id="靈性冥視" min="0"></div>
+                        <div class="input-group"><label>狂雷擊</label><input type="number" id="狂雷擊" min="0"></div>
+                        <div class="input-group"><label>元素匯聚</label><input type="number" id="元素匯聚" min="0"></div>
+                        <div class="input-group"><label>酸液噴射</label><input type="number" id="酸液噴射" min="0"></div>
+                        <div class="input-group"><label>聖光之杖</label><input type="number" id="聖光之杖" min="0"></div>
+                        <div class="input-group"><label>終極一擊</label><input type="number" id="終極一擊" min="0"></div>
+                        <div class="input-group"><label>神聖護盾</label><input type="number" id="神聖護盾" min="0"></div>
+                        <div class="input-group"><label>大治療術</label><input type="number" id="大治療術" min="0"></div>
+                        <div class="input-group"><label>曙光</label><input type="number" id="曙光" min="0"></div>
+                        <div class="input-group"><label>潮汐一斬</label><input type="number" id="潮汐一斬" min="0"></div>
+                        <div class="input-group"><label>侵蝕之觸</label><input type="number" id="侵蝕之觸" min="0"></div>
+                        <div class="input-group"><label>德魯伊風拳</label><input type="number" id="德魯伊風拳" min="0"></div>
+                        <div class="input-group"><label>聖輝斬</label><input type="number" id="聖輝斬" min="0"></div>
+                        <div class="input-group"><label>元素匯聚．強</label><input type="number" id="元素匯聚．強" min="0"></div>
+                        <div class="input-group"><label>絕對審判</label><input type="number" id="絕對審判" min="0"></div>
+                        <div class="input-group"><label>疾雷脈衝</label><input type="number" id="疾雷脈衝" min="0"></div>
+                        <div class="input-group"><label>永恆之泉</label><input type="number" id="永恆之泉" min="0"></div>
+                        <div class="input-group"><label>會心</label><input type="number" id="會心" min="0"></div>
+                        <div class="input-group"><label>暗噬龍咒</label><input type="number" id="暗噬龍咒" min="0"></div>
+                        <div class="input-group"><label>星火滅世陣</label><input type="number" id="星火滅世陣" min="0"></div>
+                        <div class="input-group"><label>虛空侵蝕</label><input type="number" id="虛空侵蝕" min="0"></div>
+                        <div class="input-group"><label>星碎滅劍</label><input type="number" id="星碎滅劍" min="0"></div>
+                        <div class="input-group"><label>不滅意志</label><input type="number" id="不滅意志" min="0"></div>
+                        <div class="input-group"><label>天雷神轟鳴</label><input type="number" id="天雷神轟鳴" min="0"></div>
+                        <div class="input-group"><label>厄水侵蝕</label><input type="number" id="厄水侵蝕" min="0"></div>
+                        <div class="input-group"><label>靈魂庇佑</label><input type="number" id="靈魂庇佑" min="0"></div>
+                        <div class="input-group"><label>野蠻震盪</label><input type="number" id="野蠻震盪" min="0"></div>
+                        <div class="input-group"><label>終絕爆破</label><input type="number" id="終絕爆破" min="0"></div>
+                        <div class="input-group"><label>星辰墜落</label><input type="number" id="星辰墜落" min="0"></div>
+                        <div class="input-group"><label>宙序裁決</label><input type="number" id="宙序裁決" min="0"></div>
+                        <div class="input-group"><label>星界終焉</label><input type="number" id="星界終焉" min="0"></div>
+                        <div class="input-group"><label>艦船冷卻加成</label><input type="number" id="艦船冷卻加成" min="0"></div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 視圖 2: 模擬戰鬥 -->
+            <section id="view-dungeon" class="view-content">
+                <div id="enemy-selection-grid"></div>
+
+                <div id="challenge-detail-view" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
+                        <button class="btn secondary" id="btn-back">← 返回列表</button>
+                        <h2 id="view-enemy-name" style="margin:0; color:#fff; font-size:2rem;">敵人名稱</h2>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 350px 1fr; gap: 30px;">
+                        <div class="card">
+                            <div style="margin-bottom: 25px;">
+                                <label
+                                    style="display:block; color:#888; font-size:0.9rem; margin-bottom:10px;">重複挑戰次數</label>
+                                <input type="number" id="input-repeat-count" value="1" min="1" max="1000"
+                                    style="width:100%; padding:12px; background:#0a0c12; border:1px solid #333; border-radius:8px; color:#fff;">
+                            </div>
+                            <button class="btn secondary" id="btn-single-test"
+                                style="width:100%; margin-bottom:10px;">單場測試</button>
+                            <button class="btn primary" id="btn-start-challenge" style="width:100%;">開始連續挑戰</button>
+                            <div style="margin-top:20px; padding-top:20px; border-top:1px solid #333;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span
+                                        style="color:#888;">勝率</span><span id="stat-win-rate"
+                                        style="color:#4ec9b0; font-weight:bold;">0%</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span
+                                        style="color:#888;">累計場次</span><span id="stat-total"
+                                        style="color:#fff;">0</span></div>
+                            </div>
+                        </div>
+                        <div class="battle-log-area">
+                            <div class="log-header"><span>戰鬥戰報</span><button
+                                    onclick="document.getElementById('log-display').innerHTML=''"
+                                    style="background:none; border:none; color:#555; cursor:pointer;">清除</button></div>
+                            <div class="log-content" id="log-display"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="toast" class="toast">設定已保存！</div>
+
+    <!-- 腳本引入 -->
+    <script src="fight/attribute.js"></script>
+    <script src="character/skill.js"></script>
+    <script src="character/genesis.js"></script>
+    <script src="fight/partner.js"></script>
+    <script src="dungeon/enemy/enemy.js"></script>
+
+    <script>
+        // 視圖切換控制
+        const subtitle = document.getElementById('app-subtitle');
+        const viewTitles = {
+            'view-character': '設定您的角色數據與技能等級',
+            'view-dungeon': '即時演算法驗證與極限挑戰系統'
+        };
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                const viewId = btn.getAttribute('data-view');
+
+                // 切換按鈕狀態
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // 切換內容視圖
+                document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+                const targetView = document.getElementById(viewId);
+                targetView.classList.add('active');
+
+                // 更新副標題
+                subtitle.textContent = viewTitles[viewId] || '';
+
+                // 更新 URL hash (使用 replaceState 避免自動捲動)
+                history.replaceState(null, null, "#" + viewId);
+
+                // 如果切換到地城，確保初始化列表
+                if (viewId === 'view-dungeon' && typeof initDungeon === 'function') {
+                    initDungeon();
+                }
+            };
+        });
+
+        // 根據 Hash 初始化視圖
+        window.addEventListener('load', () => {
+            const hash = window.location.hash.replace('#', '');
+            if (hash && document.getElementById(hash)) {
+                const btn = document.querySelector(`[data-view="${hash}"]`);
+                if (btn) btn.click();
+            }
+        });
+    </script>
+
+    <!-- 載入原始邏輯 (需微調路徑) -->
+    <script src="character/character.js"></script>
+    <script src="dungeon/dungeon.js"></script>
+</body>
+
+</html>
