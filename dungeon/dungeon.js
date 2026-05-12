@@ -375,7 +375,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                     if (verbose) battleLog(`[敵方] 受到 ${debuffKey} 影響`, 'fail');
                                 }
                             }
-                            if (verbose) battleLog(`[玩家 ${actor.id}] 使用 ${skillToUse.name}！造成 ${Math.floor(damage).toLocaleString()} 傷害 (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(Math.max(0, e.hp)).toLocaleString()})`, 'player');
+                            let attrText = "";
+                            if (attrMulti > 1) attrText = ` <span style="color:#ffcc00">(剋制 +${Math.round((attrMulti - 1) * 100)}%)</span>`;
+                            else if (attrMulti < 1) attrText = ` <span style="color:#ff4444">(被剋制 -${Math.round((1 - attrMulti) * 100)}%)</span>`;
+
+                            if (verbose) battleLog(`[玩家 ${actor.id}] 使用 ${skillToUse.name}！造成 ${Math.floor(damage).toLocaleString()} 傷害${attrText} (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(Math.max(0, e.hp)).toLocaleString()})`, 'player');
                         }
                         p.skillCDs[skillToUse.name] = (sData.cd || 0) + 1;
                     } else {
@@ -403,7 +407,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             const prevHp = tp.hp;
                             tp.hp -= damage;
                             if (tp.pendingSkill) tp.pendingSkill.damageTaken += damage;
-                            if (verbose) battleLog(`[敵方] ${skill.name} 擊中 玩家 ${pIdx + 1}！造成 ${damage.toLocaleString()} 傷害 (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(Math.max(0, tp.hp)).toLocaleString()})`, 'enemy');
+                            let attrText = "";
+                            if (attrMulti > 1) attrText = ` <span style="color:#ffcc00">(剋制 +${Math.round((attrMulti - 1) * 100)}%)</span>`;
+                            else if (attrMulti < 1) attrText = ` <span style="color:#ff4444">(被剋制 -${Math.round((1 - attrMulti) * 100)}%)</span>`;
+
+                            if (verbose) battleLog(`[敵方] ${skill.name} 擊中 玩家 ${pIdx + 1}！造成 ${damage.toLocaleString()} 傷害${attrText} (${Math.floor(prevHp).toLocaleString()} -> ${Math.floor(Math.max(0, tp.hp)).toLocaleString()})`, 'enemy');
                             if (skill.dot) tp.activeDots.push({ ...skill.dot });
                             if (skill.debuff) {
                                 tp.activeDebuffs.push({ 
