@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isRunning = false;
 
     // 1. 初始化列表
-    function init() {
+    window.initDungeon = function() {
+        if (!selectionGrid) return;
         if (typeof ENEMY_DATABASE === 'undefined') {
             selectionGrid.innerHTML = '<div style="color:#f44747; padding:40px; text-align:center;">錯誤：找不到 ENEMY_DATABASE</div>';
             return;
@@ -514,12 +515,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         battleLog(`===============================`, 'info');
         battleLog(`挑戰結束！ 勝率：${((wins / count) * 100).toFixed(2)}%`, 'success');
+        
+        // 補回每個玩家的存活狀態統計
+        players.forEach((p, idx) => {
+            const sRate = ((survivalCounts[idx] / count) * 100).toFixed(1);
+            battleLog(`玩家 ${idx + 1} 存活率：${sRate}% (${survivalCounts[idx]}/${count})`, 'player');
+        });
+
         isRunning = false;
         startBtn.disabled = false;
         singleBtn.disabled = false;
         startBtn.textContent = '開始連續挑戰';
     };
 
-    window.initDungeon = init;
-    init();
+    window.initDungeon();
 });

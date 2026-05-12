@@ -11,13 +11,13 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dungeon.css">
     <style>
         :root {
             --primary-glow: rgba(78, 201, 176, 0.3);
             --accent-color: #4ec9b0;
             --bg-dark: #0f111a;
-            --card-bg: rgba(30, 33, 45, 0.8);
         }
 
         body {
@@ -56,39 +56,6 @@
             font-size: 1.1rem;
         }
 
-        /* 導航分頁 */
-        .tabs {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .tab-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #888;
-            padding: 12px 30px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            text-decoration: none;
-        }
-
-        .tab-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-        }
-
-        .tab-btn.active {
-            background: var(--accent-color);
-            color: #000;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 15px var(--primary-glow);
-        }
-
-        /* 視圖切換 */
         .view-content {
             display: none;
             animation: fadeIn 0.5s ease;
@@ -98,237 +65,26 @@
             display: block;
         }
 
-        /* 通用卡片樣式 */
-        .card {
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            margin-bottom: 30px;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 10px;
-        }
-
-        .card-header h2 {
-            margin: 0;
-            color: #fff;
-            font-size: 1.5rem;
-        }
-
-        /* 敵人選擇區 */
-        #enemy-selection-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-            justify-content: center;
-        }
-
-        .enemy-card {
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            padding: 25px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-        }
-
-        .enemy-card:hover {
-            transform: translateY(-8px);
-            border-color: var(--accent-color);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px var(--primary-glow);
-        }
-
-        /* 戰鬥實況戰報 */
-        .battle-log-area {
-            background: #0a0c12;
-            border-radius: 20px;
-            border: 1px solid #1e212d;
-            height: 600px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .log-header {
-            padding: 15px 25px;
-            background: #161922;
-            border-bottom: 1px solid #222;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .log-content {
-            flex: 1;
-            padding: 25px;
-            overflow-y: auto;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 0.95rem;
-            line-height: 1.6;
-            color: #d4d4d4;
-        }
-
-        .log-entry {
-            margin-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding-bottom: 5px;
-        }
-
-        .log-success {
-            color: #4ec9b0;
-        }
-
-        .log-fail {
-            color: #f44747;
-        }
-
-        .log-info {
-            color: #9cdcfe;
-        }
-
-        .log-player {
-            color: #4ec9b0;
-        }
-
-        .log-enemy {
-            color: #ffab91;
-        }
-
-        .log-round {
-            color: #ce9178;
-            font-weight: bold;
-            margin-top: 15px;
-            padding: 5px 0;
-            border-bottom: 1px solid #333;
-            font-size: 1.1rem;
-        }
-
-        /* 角色設定表格 */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 12px;
-        }
-
-        .input-group label {
-            display: block;
-            color: #888;
-            font-size: 0.85rem;
-            margin-bottom: 4px;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 8px;
-            background: #0a0c12;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 1rem;
-            box-sizing: border-box;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: none;
-        }
-
-        .btn.primary {
-            background: var(--accent-color);
-            color: #000;
-        }
-
-        .btn.secondary {
-            background: transparent;
-            border: 1px solid #444;
-            color: #aaa;
-        }
-
-        .toast {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: #10b981;
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 1000;
-        }
-
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        footer {
-            margin-top: 50px;
-            padding: 30px 0;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            text-align: center;
-        }
-
-        .footer-info {
-            color: #555;
-            font-size: 0.9rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .footer-info .divider {
-            color: #333;
-        }
-
-        #lastUpdated {
-            color: #888;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
+        /* 視圖切換動畫 */
         @keyframes fadeInDown {
             from {
                 opacity: 0;
                 transform: translateY(-30px);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 導航分頁輔助樣式 */
+        .tabs {
+            margin-bottom: 15px !important;
         }
 
         /* 隱藏原生連結樣式 */
@@ -445,35 +201,45 @@
                 <div id="enemy-selection-grid"></div>
 
                 <div id="challenge-detail-view" style="display: none;">
-                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
-                        <button class="btn secondary" id="btn-back">← 返回列表</button>
+                    <div class="detail-header" style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
+                        <button class="back-btn" id="btn-back">← 返回列表</button>
                         <h2 id="view-enemy-name" style="margin:0; color:#fff; font-size:2rem;">敵人名稱</h2>
                     </div>
-                    <div style="display: grid; grid-template-columns: 350px 1fr; gap: 30px;">
-                        <div class="card">
-                            <div style="margin-bottom: 25px;">
-                                <label
-                                    style="display:block; color:#888; font-size:0.9rem; margin-bottom:10px;">重複挑戰次數</label>
-                                <input type="number" id="input-repeat-count" value="1" min="1" max="1000"
-                                    style="width:100%; padding:12px; background:#0a0c12; border:1px solid #333; border-radius:8px; color:#fff;">
+
+                    <div class="challenge-layout">
+                        <!-- 左側配置 -->
+                        <div class="config-panel">
+                            <div class="config-group">
+                                <label>重複挑戰次數 (1-1000)</label>
+                                <input type="number" id="input-repeat-count" value="10" min="1" max="1000">
                             </div>
-                            <button class="btn secondary" id="btn-single-test"
-                                style="width:100%; margin-bottom:10px;">單場測試</button>
-                            <button class="btn primary" id="btn-start-challenge" style="width:100%;">開始連續挑戰</button>
-                            <div style="margin-top:20px; padding-top:20px; border-top:1px solid #333;">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span
-                                        style="color:#888;">勝率</span><span id="stat-win-rate"
-                                        style="color:#4ec9b0; font-weight:bold;">0%</span></div>
-                                <div style="display:flex; justify-content:space-between;"><span
-                                        style="color:#888;">累計場次</span><span id="stat-total"
-                                        style="color:#fff;">0</span></div>
+
+                            <button class="btn btn-outline" id="btn-single-test" style="width:100%; margin-bottom:15px;">單場測試 (顯示日誌)</button>
+                            <button class="btn btn-primary" id="btn-start-challenge" style="width:100%;">開始連續挑戰</button>
+
+                            <div id="quick-stats" style="margin-top:20px; padding-top:20px; border-top:1px solid #333;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                                    <span style="color:#888;">成功率</span>
+                                    <span id="stat-win-rate" style="color:#4ec9b0; font-weight:bold;">0%</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between;">
+                                    <span style="color:#888;">累計場次</span>
+                                    <span id="stat-total" style="color:#fff;">0</span>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- 右側日誌 -->
                         <div class="battle-log-area">
-                            <div class="log-header"><span>戰鬥戰報</span><button
-                                    onclick="document.getElementById('log-display').innerHTML=''"
-                                    style="background:none; border:none; color:#555; cursor:pointer;">清除</button></div>
-                            <div class="log-content" id="log-display"></div>
+                            <div class="log-header">
+                                <span style="color:#888; font-size:0.9rem;">戰鬥實況戰報</span>
+                                <button onclick="document.getElementById('log-display').innerHTML=''"
+                                    style="background:none; border:none; color:#555; cursor:pointer; font-size:0.8rem;">清除紀錄</button>
+                            </div>
+                            <div class="log-content" id="log-display">
+                                <!-- 戰報顯示 -->
+                                <div class="log-entry log-info">等待開始...</div>
+                            </div>
                         </div>
                     </div>
                 </div>

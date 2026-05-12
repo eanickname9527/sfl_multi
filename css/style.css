@@ -7,12 +7,12 @@
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     
-    --accent-primary: #3b82f6;
-    --accent-hover: #2563eb;
-    --accent-glow: rgba(59, 130, 246, 0.5);
+    --accent-primary: #4ec9b0;
+    --accent-hover: #3db89e;
+    --accent-glow: rgba(78, 201, 176, 0.4);
     
     --success: #10b981;
-    --border-color: #334155;
+    --border-color: rgba(255, 255, 255, 0.1);
     
     /* Effects */
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -132,6 +132,7 @@ body {
     padding: 2rem;
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border-color);
+    margin-bottom: 30px;
     position: relative;
     overflow: hidden;
 }
@@ -227,14 +228,26 @@ body {
 }
 
 .btn.primary {
-    background: var(--accent-primary);
-    color: white;
+    background: linear-gradient(135deg, #4ec9b0 0%, #2b927d 100%);
+    color: #000;
+    font-weight: 700;
 }
 
 .btn.primary:hover:not(:disabled) {
-    background: var(--accent-hover);
-    box-shadow: var(--shadow-glow);
+    box-shadow: 0 0 20px var(--accent-glow);
     transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+.btn.btn-outline, .btn.secondary {
+    background: transparent;
+    border: 1px solid var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.btn.btn-outline:hover:not(:disabled), .btn.secondary:hover:not(:disabled) {
+    background: rgba(78, 201, 176, 0.1);
+    color: #fff;
 }
 
 .btn:disabled {
