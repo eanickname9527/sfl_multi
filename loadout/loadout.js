@@ -3,7 +3,7 @@
  * Handles decoding and importing .sfl loadout files
  */
 
-(function() {
+(function () {
     let decodedData = null;
     let skillDatabase = {};
     const cardDatabase = {};
@@ -51,10 +51,10 @@
         if (window.SFL_CARDS_DB) {
             window.SFL_CARDS_DB.forEach(c => cardDatabase[c.id] = c.name);
         }
-        
-        console.log('Local databases loaded:', { 
-            skills: Object.keys(skillDatabase).length, 
-            cards: Object.keys(cardDatabase).length 
+
+        console.log('Local databases loaded:', {
+            skills: Object.keys(skillDatabase).length,
+            cards: Object.keys(cardDatabase).length
         });
     }
 
@@ -67,24 +67,24 @@
         const str = raw.trim();
         if (str.startsWith('{')) return JSON.parse(str);
         if (!str.startsWith('SFL1:')) throw new Error('格式不正確 (Missing SFL1 header)');
-        
+
         const parts = str.split(':');
         if (parts.length < 3) throw new Error('格式不正確 (Invalid parts)');
-        
+
         const savedChecksum = parseInt(parts[1], 10);
         const b64 = parts.slice(2).join(':');
         const jsonStr = decodeURIComponent(escape(atob(b64)));
-        
+
         // Verify checksum
         let checksum = 0;
-        for (let i = 0; i < jsonStr.length; i += 7) { 
-            checksum = (checksum + jsonStr.charCodeAt(i)) % 65521; 
+        for (let i = 0; i < jsonStr.length; i += 7) {
+            checksum = (checksum + jsonStr.charCodeAt(i)) % 65521;
         }
-        
+
         if (checksum !== savedChecksum) {
             throw new Error('資料已被修改，校驗失敗 (Checksum mismatch)');
         }
-        
+
         return JSON.parse(jsonStr);
     }
 
@@ -95,8 +95,8 @@
         const jsonStr = JSON.stringify(data);
         const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
         let checksum = 0;
-        for (let i = 0; i < jsonStr.length; i += 7) { 
-            checksum = (checksum + jsonStr.charCodeAt(i)) % 65521; 
+        for (let i = 0; i < jsonStr.length; i += 7) {
+            checksum = (checksum + jsonStr.charCodeAt(i)) % 65521;
         }
         return 'SFL1:' + checksum + ':' + b64;
     }
@@ -116,9 +116,9 @@
         try {
             const text = await file.text();
             decodedData = decodeSFLData(text);
-            
+
             populateDropdowns();
-            
+
             // Enable controls
             statSelect.disabled = false;
             skillSelect.disabled = false;
@@ -154,12 +154,12 @@
             const opt = document.createElement('option');
             opt.value = id;
             opt.textContent = `${id}. ${name}`;
-            
+
             if (!hasData) {
                 // 如果沒資料，讓選項變灰
                 opt.style.color = '#555';
             }
-            
+
             select.appendChild(opt);
         });
     }
@@ -179,7 +179,7 @@
         const statId = statSelect.value;
         if (statId && decodedData.sfl_stat_loadouts[statId]) {
             const statPoints = decodedData.sfl_stat_loadouts[statId].stats;
-            
+
             // 同步至細項設定
             updateInputValue('detail-hp', statPoints.hp || 0);
             updateInputValue('detail-attack', statPoints.attack || 0);
@@ -191,7 +191,7 @@
             finalStats.attack += (statPoints.attack || 0);
             finalStats.luck += (statPoints.luck || 0);
             finalStats.atk_speed += (statPoints.atk_speed || 0);
-            
+
             const name = decodedData.sfl_stat_slot_names[statId] || statId;
             importNames.push(`能力[${name}]`);
             importCount++;
@@ -219,7 +219,7 @@
         const cardId = cardSelect.value;
         if (cardId && decodedData.sfl_card_loadouts[cardId]) {
             const cards = decodedData.sfl_card_loadouts[cardId].cards;
-            
+
             // 同步至細項設定 (SFL 卡片預設為 5 等)
             Object.entries(cards).forEach(([slot, cid]) => {
                 const slotNum = parseInt(slot);
@@ -232,22 +232,22 @@
             // Iterate through 5 card slots
             Object.values(cards).forEach(cardId => {
                 if (!cardId) return;
-                
+
                 // Find card in local database
                 const cardData = window.SFL_CARDS_DB ? window.SFL_CARDS_DB.find(c => c.id === cardId) : null;
                 if (cardData && cardData.value && cardData.value["5"]) {
                     const bonus = cardData.value["5"];
-                    
+
                     // Sum up bonuses
                     if (bonus.hp) finalStats.hp += bonus.hp;
                     if (bonus.attack) finalStats.attack += bonus.attack;
                     if (bonus.luck) finalStats.luck += bonus.luck;
                     if (bonus.atk_speed) finalStats.atk_speed += bonus.atk_speed;
                     if (bonus.shield) finalStats.shield += bonus.shield;
-                    
+
                     // Map database keys to UI keys
-                    if (bonus.evade) finalStats.evasion += (bonus.evade * 100); 
-                    if (bonus.accuracy) finalStats.hit_rate += (bonus.accuracy * 100); 
+                    if (bonus.evade) finalStats.evasion += (bonus.evade * 100);
+                    if (bonus.accuracy) finalStats.hit_rate += (bonus.accuracy * 100);
                     if (bonus.penetrate) finalStats.shield_pen += bonus.penetrate;
                     if (bonus.other_bonus) finalStats.bonus_dmg += (bonus.other_bonus * 100);
                 }
@@ -297,7 +297,7 @@
         if (!decodedData) return;
 
         // 增加確認窗
-        const isConfirmed = confirm('您確定要將目前的「細項設定」與「技能等級」寫回並匯出新的 SFL 檔案嗎？\n\n這將會更新您目前選中的分頁槽位。');
+        const isConfirmed = confirm('您確定要將目前的「細項設定」與「技能等級」寫回並匯出新的 SFL 檔案嗎？\n\n這將會更新您目前選中的分頁槽位。\n\n(技能等級設定沒列出來的技能會設為0)');
         if (!isConfirmed) return;
 
         const statId = statSelect.value;
@@ -332,7 +332,7 @@
                 decodedData.sfl_skill_loadouts[skillId] = { skills: {}, playerLevel: 429, totalSkillPoints: 0 };
             }
             const currentSkills = decodedData.sfl_skill_loadouts[skillId].skills;
-            
+
             // 對原本資料中所有的技能 Key 進行更新，若 UI 沒列出則設為 0
             Object.keys(currentSkills).forEach(sId => {
                 const sName = skillDatabase[sId];
@@ -371,7 +371,7 @@
         try {
             // Encode
             const encoded = encodeExportData(decodedData);
-            
+
             // Download file
             const blob = new Blob([encoded], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
