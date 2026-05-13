@@ -34,7 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
         '疾雷脈衝': 0, '永恆之泉': 0, '會心': 0, '暗噬龍咒': 60, '星火滅世陣': 60,
         '虛空侵蝕': 70, '星碎滅劍': 0, '不滅意志': 0, '天雷神轟鳴': 70, '厄水侵蝕': 50,
         '靈魂庇佑': 0, '野蠻震盪': 0, '終絕爆破': 0, '星辰墜落': 25, '宙序裁決': 25,
-        '星界終焉': 0, '艦船冷卻加成': 0
+        '星界終焉': 0, '艦船冷卻加成': 0,
+        isDetailedEnabled: false,
+        // 細項加點
+        'detail-hp': 0, 'detail-attack': 0, 'detail-luck': 0, 'detail-atk_speed': 0,
+        // 卡片插槽
+        'card-slot-1': '', 'card-lv-1': 5,
+        'card-slot-2': '', 'card-lv-2': 5,
+        'card-slot-3': '', 'card-lv-3': 5,
+        'card-slot-4': '', 'card-lv-4': 5,
+        'card-slot-5': '', 'card-lv-5': 5
     };
     
     // P2, P3 預設不加入
@@ -73,6 +82,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             joinToggleContainer.style.display = 'none';
         }
+
+        // 處理細項設定開關
+        const detailedToggle = document.getElementById('detailed-settings-toggle');
+        if (detailedToggle) {
+            detailedToggle.checked = !!stats.isDetailedEnabled;
+            detailedToggle.dispatchEvent(new Event('change'));
+        }
     }
 
     function saveCurrentPlayerStats(e) {
@@ -90,7 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
         statKeys.forEach(key => {
             const input = document.getElementById(key);
             if (input) {
-                stats[key] = input.value !== '' ? Number(input.value) : stats[key];
+                if (input.type === 'number') {
+                    stats[key] = input.value !== '' ? Number(input.value) : stats[key];
+                } else {
+                    stats[key] = input.value;
+                }
             }
         });
 
@@ -99,6 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
             stats.isEnabled = joinCombatToggle.checked;
         } else {
             stats.isEnabled = true; // P1 總是啟用
+        }
+
+        // 取得細項設定開關
+        const detailedToggle = document.getElementById('detailed-settings-toggle');
+        if (detailedToggle) {
+            stats.isDetailedEnabled = detailedToggle.checked;
         }
 
         localStorage.setItem(getStorageKey(currentPlayer), JSON.stringify(stats));

@@ -23,6 +23,10 @@
     --radius-md: 0.5rem;
     --radius-lg: 1rem;
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Legacy compatibility for dungeon.css */
+    --accent-color: #4ec9b0;
+    --primary-glow: rgba(78, 201, 176, 0.3);
 }
 
 * {
@@ -357,4 +361,130 @@ body {
     .tabs {
         flex-direction: column;
     }
+}
+
+/* UI Components & Detailed Settings */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 22px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #333;
+    transition: .4s;
+    border-radius: 22px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--accent-primary);
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+.detailed-content {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Locked state for stat form */
+#stats-form.locked label,
+#stats-form.locked input {
+    color: #666 !important;
+    transition: color 0.3s ease;
+}
+
+/* Card slot dropdowns */
+.card-db-select,
+.card-lv-select {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    transition: var(--transition);
+    cursor: pointer;
+    outline: none;
+}
+
+.card-db-select:focus,
+.card-lv-select:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* View Visibility Logic */
+.view-content {
+    display: none;
+    animation: fadeIn 0.5s ease;
+}
+
+.view-content.active {
+    display: block;
+}
+
+/* Extra Animations */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Player Selector Styling */
+.player-tab {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    padding: 0.4rem 1rem !important;
+    font-size: 0.85rem !important;
+    border-radius: 8px !important;
+    min-height: auto !important;
+    transition: var(--transition);
+}
+
+.player-tab:hover {
+    color: var(--text-primary) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.player-tab.active {
+    background: var(--accent-primary) !important;
+    color: #000 !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(78, 201, 176, 0.3);
 }
