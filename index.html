@@ -245,38 +245,45 @@
                     <div class="card-header">
                         <div style="display: flex; align-items: baseline; gap: 10px;">
                             <h2>遊戲配置載入</h2>
-                            <span style="font-size: 0.75rem; color: #888;">(所有卡片以五等能力值載入)</span>
+                            <span id="sfl-filename" style="font-size: 0.85rem; color: #4ec9b0; font-weight: bold; margin-left: 10px;"></span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <span id="sfl-filename"
-                                style="font-size: 0.85rem; color: #4ec9b0; font-weight: bold;"></span>
-                            <button id="load-sfl-btn" class="btn secondary">載入遊戲配置</button>
-                            <button id="import-sfl-btn" class="btn primary" disabled>導入設定</button>
-                        </div>
+                        <span style="font-size: 0.75rem; color: #888;">(所有卡片以五等能力值載入)</span>
                     </div>
                     <input type="file" id="sfl-file-input" accept=".sfl" style="display: none;">
-                    <div class="loadout-controls stats-grid" style="margin-top: 15px;">
-                        <div class="input-group">
-                            <label>能力分頁</label>
-                            <select id="stat-slot-select" class="sfl-select" disabled>
-                                <option value="">請先載入檔案</option>
-                            </select>
+                    
+                    <div style="padding: 20px;">
+                        <!-- 第一排：操作按鈕 (上移) -->
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
+                            <button id="load-sfl-btn" class="btn secondary">載入遊戲配置</button>
+                            <button id="import-sfl-btn" class="btn primary" disabled>導入設定</button>
+                            <button id="export-sfl-btn" class="btn btn-outline" disabled>匯出配置</button>
                         </div>
-                        <div class="input-group">
-                            <label>技能分頁</label>
-                            <select id="skill-slot-select" class="sfl-select" disabled>
-                                <option value="">請先載入檔案</option>
-                            </select>
+
+                        <!-- 第二排：下拉選單 (下移) -->
+                        <div class="loadout-controls stats-grid">
+                            <div class="input-group">
+                                <label>能力分頁</label>
+                                <select id="stat-slot-select" class="sfl-select" disabled>
+                                    <option value="">請先載入檔案</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>技能分頁</label>
+                                <select id="skill-slot-select" class="sfl-select" disabled>
+                                    <option value="">請先載入檔案</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>卡片分頁</label>
+                                <select id="card-slot-select" class="sfl-select" disabled>
+                                    <option value="">請先載入檔案</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <label>卡片分頁</label>
-                            <select id="card-slot-select" class="sfl-select" disabled>
-                                <option value="">請先載入檔案</option>
-                            </select>
+
+                        <div id="loadout-info" style="margin-top: 20px; font-size: 0.85rem; color: #888; text-align: center;">
+                            提示：先點擊「載入遊戲配置」選取您的 .sfl 檔案，然後選擇分頁並點擊導入。
                         </div>
-                    </div>
-                    <div id="loadout-info" style="margin-top: 10px; font-size: 0.85rem; color: #888;">
-                        提示：先點擊「載入遊戲配置」選取您的 .sfl 檔案，然後選擇要導入的分頁，最後點擊「導入設定」。
                     </div>
                 </div>
             </section>

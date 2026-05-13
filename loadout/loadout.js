@@ -23,6 +23,7 @@
     // DOM Elements
     const loadBtn = document.getElementById('load-sfl-btn');
     const importBtn = document.getElementById('import-sfl-btn');
+    const exportBtn = document.getElementById('export-sfl-btn');
     const fileInput = document.getElementById('sfl-file-input');
     const filenameDisplay = document.getElementById('sfl-filename');
     const loadoutInfo = document.getElementById('loadout-info');
@@ -30,15 +31,22 @@
     const skillSelect = document.getElementById('skill-slot-select');
     const cardSelect = document.getElementById('card-slot-select');
 
+    // Reverse mapping for skills
+    const reverseSkillMap = {};
+
     // Initialize
     function init() {
         loadBtn.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileSelect);
         importBtn.addEventListener('click', importSelectedLoadouts);
+        exportBtn.addEventListener('click', exportConfiguration);
 
         // Load Databases from local JS source
         if (window.SFL_SKILLS_DB) {
-            window.SFL_SKILLS_DB.forEach(s => skillDatabase[s.id] = s.name);
+            window.SFL_SKILLS_DB.forEach(s => {
+                skillDatabase[s.id] = s.name;
+                reverseSkillMap[s.name] = s.id;
+            });
         }
         if (window.SFL_CARDS_DB) {
             window.SFL_CARDS_DB.forEach(c => cardDatabase[c.id] = c.name);
@@ -81,6 +89,19 @@
     }
 
     /**
+     * Encode SFL data
+     */
+    function encodeExportData(data) {
+        const jsonStr = JSON.stringify(data);
+        const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+        let checksum = 0;
+        for (let i = 0; i < jsonStr.length; i += 7) { 
+            checksum = (checksum + jsonStr.charCodeAt(i)) % 65521; 
+        }
+        return 'SFL1:' + checksum + ':' + b64;
+    }
+
+    /**
      * Handle file selection
      */
     async function handleFileSelect(event) {
@@ -103,6 +124,7 @@
             skillSelect.disabled = false;
             cardSelect.disabled = false;
             importBtn.disabled = false;
+            exportBtn.disabled = false;
         } catch (e) {
             loadoutInfo.textContent = '⚠️ 載入失敗：' + e.message;
             loadoutInfo.style.color = '#f44747';
@@ -128,13 +150,17 @@
         if (!names) return;
 
         Object.entries(names).forEach(([id, name]) => {
-            // Only add if there is data in this slot
-            if (data && data[id]) {
-                const opt = document.createElement('option');
-                opt.value = id;
-                opt.textContent = `${id}. ${name}`;
-                select.appendChild(opt);
+            const hasData = data && data[id] !== null && data[id] !== undefined;
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = `${id}. ${name}`;
+            
+            if (!hasData) {
+                // 如果沒資料，讓選項變灰
+                opt.style.color = '#555';
             }
+            
+            select.appendChild(opt);
         });
     }
 
@@ -264,6 +290,108 @@
         }
     }
 
+    /**
+     * Export current simulator settings back to a .sfl file
+     */
+    function exportConfiguration() {
+        if (!decodedData) return;
+
+        // 增加確認窗
+        const isConfirmed = confirm('您確定要將目前的「細項設定」與「技能等級」寫回並匯出新的 SFL 檔案嗎？\n\n這將會更新您目前選中的分頁槽位。');
+        if (!isConfirmed) return;
+
+        const statId = statSelect.value;
+        const skillId = skillSelect.value;
+        const cardId = cardSelect.value;
+
+        if (!statId && !skillId && !cardId) {
+            alert('請至少選擇一個分頁作為匯出的目標槽位。');
+            return;
+        }
+
+        const now = Date.now();
+
+        // 1. Update Stats (Detailed Settings)
+        if (statId) {
+            const stats = {
+                hp: Number(document.getElementById('detail-hp')?.value || 0),
+                attack: Number(document.getElementById('detail-attack')?.value || 0),
+                luck: Number(document.getElementById('detail-luck')?.value || 0),
+                atk_speed: Number(document.getElementById('detail-atk_speed')?.value || 0)
+            };
+            if (!decodedData.sfl_stat_loadouts[statId]) {
+                decodedData.sfl_stat_loadouts[statId] = { stats: {}, playerLevel: 429, availableStatPoints: 0 };
+            }
+            decodedData.sfl_stat_loadouts[statId].stats = stats;
+            decodedData.sfl_stat_loadouts[statId].timestamp = now;
+        }
+
+        // 2. Update Skills (Skill Form)
+        if (skillId) {
+            if (!decodedData.sfl_skill_loadouts[skillId]) {
+                decodedData.sfl_skill_loadouts[skillId] = { skills: {}, playerLevel: 429, totalSkillPoints: 0 };
+            }
+            const currentSkills = decodedData.sfl_skill_loadouts[skillId].skills;
+            
+            // 對原本資料中所有的技能 Key 進行更新，若 UI 沒列出則設為 0
+            Object.keys(currentSkills).forEach(sId => {
+                const sName = skillDatabase[sId];
+                if (sName) {
+                    const uiInput = document.getElementById(sName);
+                    currentSkills[sId] = uiInput ? Number(uiInput.value || 0) : 0;
+                } else {
+                    currentSkills[sId] = 0;
+                }
+            });
+
+            // 另外檢查 UI 中是否有新的技能不在原本檔案中
+            Object.entries(reverseSkillMap).forEach(([sName, sId]) => {
+                if (currentSkills[sId] === undefined) {
+                    const uiInput = document.getElementById(sName);
+                    if (uiInput) currentSkills[sId] = Number(uiInput.value || 0);
+                }
+            });
+
+            decodedData.sfl_skill_loadouts[skillId].timestamp = now;
+        }
+
+        // 3. Update Cards (Card Slots)
+        if (cardId) {
+            if (!decodedData.sfl_card_loadouts[cardId]) {
+                decodedData.sfl_card_loadouts[cardId] = { cards: {} };
+            }
+            const currentCards = {};
+            for (let i = 1; i <= 5; i++) {
+                currentCards[i.toString()] = document.getElementById(`card-slot-${i}`)?.value || null;
+            }
+            decodedData.sfl_card_loadouts[cardId].cards = currentCards;
+            decodedData.sfl_card_loadouts[cardId].timestamp = now;
+        }
+
+        try {
+            // Encode
+            const encoded = encodeExportData(decodedData);
+            
+            // Download file
+            const blob = new Blob([encoded], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const originalName = filenameDisplay.textContent.replace('📄 ', '').replace('.sfl', '') || 'export';
+            a.href = url;
+            a.download = `${originalName}_modified.sfl`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            loadoutInfo.textContent = '✅ 配置匯出成功！';
+            loadoutInfo.style.color = '#4ec9b0';
+        } catch (e) {
+            console.error('Export error:', e);
+            alert('匯出失敗：' + e.message);
+        }
+    }
+
     function updateInputValue(id, value) {
         const el = document.getElementById(id);
         if (el) {
@@ -272,6 +400,5 @@
             el.dispatchEvent(new Event('input', { bubbles: true }));
         }
     }
-
 
 })();
