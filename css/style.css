@@ -424,6 +424,15 @@ input:checked + .slider:before {
     transition: color 0.3s ease;
 }
 
+/* 排除等級欄位的鎖定樣式 */
+#stats-form.locked input#level {
+    color: var(--text-primary) !important;
+}
+
+#stats-form.locked .input-group:has(input#level) label {
+    color: var(--text-secondary) !important;
+}
+
 /* Card slot dropdowns */
 .card-db-select,
 .card-lv-select {

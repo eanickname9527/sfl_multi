@@ -57,7 +57,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isChecked) {
                 body.style.display = 'block';
                 statForm.classList.add('locked');
-                statInputs.forEach(input => input.disabled = true);
+                statInputs.forEach(input => {
+                    // 排除等級欄位 (ID 為 level)，讓它在鎖定模式下依然可以輸入
+                    if (input.id !== 'level') {
+                        input.disabled = true;
+                    }
+                });
                 populateCardSelects(); // 開啟時確保文字最新
                 updateFinalStatsFromDetailed(); // 切換時立即計算
             } else {
