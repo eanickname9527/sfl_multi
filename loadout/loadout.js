@@ -74,7 +74,7 @@
         }
         
         if (checksum !== savedChecksum) {
-            console.warn('Checksum mismatch, but attempting to parse anyway...');
+            throw new Error('資料已被修改，校驗失敗 (Checksum mismatch)');
         }
         
         return JSON.parse(jsonStr);
@@ -154,6 +154,12 @@
         if (statId && decodedData.sfl_stat_loadouts[statId]) {
             const statPoints = decodedData.sfl_stat_loadouts[statId].stats;
             
+            // 同步至細項設定
+            updateInputValue('detail-hp', statPoints.hp || 0);
+            updateInputValue('detail-attack', statPoints.attack || 0);
+            updateInputValue('detail-luck', statPoints.luck || 0);
+            updateInputValue('detail-atk_speed', statPoints.atk_speed || 0);
+
             // Add points to final stats
             finalStats.hp += (statPoints.hp || 0);
             finalStats.attack += (statPoints.attack || 0);
@@ -188,6 +194,15 @@
         if (cardId && decodedData.sfl_card_loadouts[cardId]) {
             const cards = decodedData.sfl_card_loadouts[cardId].cards;
             
+            // 同步至細項設定 (SFL 卡片預設為 5 等)
+            Object.entries(cards).forEach(([slot, cid]) => {
+                const slotNum = parseInt(slot);
+                if (slotNum >= 1 && slotNum <= 5) {
+                    updateInputValue(`card-slot-${slotNum}`, cid || '');
+                    updateInputValue(`card-lv-${slotNum}`, 5);
+                }
+            });
+
             // Iterate through 5 card slots
             Object.values(cards).forEach(cardId => {
                 if (!cardId) return;
@@ -218,6 +233,17 @@
 
         // Apply Final Stats to UI
         if (statId || cardId) {
+            // 自動開啟細項設定並同步
+            const detailedToggle = document.getElementById('detailed-settings-toggle');
+            if (detailedToggle && !detailedToggle.checked) {
+                detailedToggle.checked = true;
+                detailedToggle.dispatchEvent(new Event('change'));
+            }
+
+            // 更新細項介面顯示
+            if (window.populateCardSelects) window.populateCardSelects();
+            if (window.updateFinalStatsFromDetailed) window.updateFinalStatsFromDetailed();
+
             updateInputValue('hp', Math.round(finalStats.hp));
             updateInputValue('attack', Math.round(finalStats.attack));
             updateInputValue('luck', Math.round(finalStats.luck));
