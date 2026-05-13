@@ -194,6 +194,43 @@
                         <div class="input-group"><label>星界終焉</label><input type="number" id="星界終焉" min="0"></div>
                     </form>
                 </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display: flex; align-items: baseline; gap: 10px;">
+                            <h2>遊戲配置載入</h2>
+                            <span style="font-size: 0.75rem; color: #888;">(所有卡片以五等能力值載入)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span id="sfl-filename" style="font-size: 0.85rem; color: #4ec9b0; font-weight: bold;"></span>
+                            <button id="load-sfl-btn" class="btn secondary">載入遊戲配置</button>
+                            <button id="import-sfl-btn" class="btn primary" disabled>導入設定</button>
+                        </div>
+                    </div>
+                    <input type="file" id="sfl-file-input" accept=".sfl" style="display: none;">
+                    <div class="loadout-controls stats-grid" style="margin-top: 15px;">
+                        <div class="input-group">
+                            <label>能力分頁</label>
+                            <select id="stat-slot-select" class="sfl-select" disabled>
+                                <option value="">請先載入檔案</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>技能分頁</label>
+                            <select id="skill-slot-select" class="sfl-select" disabled>
+                                <option value="">請先載入檔案</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>卡片分頁</label>
+                            <select id="card-slot-select" class="sfl-select" disabled>
+                                <option value="">請先載入檔案</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="loadout-info" style="margin-top: 10px; font-size: 0.85rem; color: #888;">
+                        提示：先點擊「載入遊戲配置」選取您的 .sfl 檔案，然後選擇要導入的分頁，最後點擊「導入設定」。
+                    </div>
+                </div>
             </section>
 
             <!-- 視圖 2: 模擬戰鬥 -->
@@ -328,6 +365,9 @@
     <!-- 載入角色邏輯 (三個玩家共用邏輯或個別引入) -->
     <script src="character/character.js"></script>
     <script src="dungeon/dungeon.js"></script>
+    <script src="loadout/equips.js"></script>
+    <script src="loadout/skills.js"></script>
+    <script src="loadout/loadout.js"></script>
 </body>
 
 </html>
