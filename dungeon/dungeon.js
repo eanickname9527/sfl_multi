@@ -331,9 +331,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const available = p.ownedSkills.filter(s => (p.skillCDs[s.name] || 0) === 0);
                     let skillToUse = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : { name: '普攻', lv: 1, data: ATTACK_SKILLS_DATA['普攻'], type: 'attack' };
-
+                    const sData = skillToUse.data;
                     const pHitRate = (p.hit_rate || 100) * getBuffMulti(p, 'hit_rate');
                     let p_hit = pHitRate - eEva - ((e.luck || 0) * 0.004);
+                    
+                    // '全' 屬性技能無視迴避一定命中
+                    if (sData && sData.attr && sData.attr.includes('全')) {
+                        p_hit = 1000;
+                    }
+                    
                     p_hit = Math.max(2, p_hit);
 
                     if (skillToUse.type === 'heal') {
@@ -348,13 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                         p.skillCDs[skillToUse.name] = (sData.cd || 0) + 1;
                     } else if (skillToUse.type === 'buff') {
-                        const sData = skillToUse.data;
                         const bValue = typeof sData.multi === 'function' ? sData.multi(skillToUse.lv, p) : (sData.multi || 1.0);
                         p.activeBuffs.push({ name: skillToUse.name, effect: sData.effect, value: bValue, dur: sData.dur, pending: true });
                         if (verbose) battleLog(`[玩家 ${actor.id}] 使用 ${skillToUse.name}！(將於下回合生效，持續 ${sData.dur} 回合)`, 'info');
                         p.skillCDs[skillToUse.name] = (sData.cd || 0) + 1;
                     } else if (Math.random() * 100 < p_hit) {
-                        const sData = skillToUse.data;
                         if (skillToUse.name === '元素匯聚' || skillToUse.name === '元素匯聚．強') {
                             p.pendingSkill = { name: skillToUse.name, lv: skillToUse.lv, data: sData, countdown: 2, damageTaken: 0 };
                             if (verbose) battleLog(`[玩家 ${actor.id}] 開始引導 ${skillToUse.name}...`, 'info');
