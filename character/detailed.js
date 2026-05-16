@@ -5,15 +5,25 @@ document.addEventListener('DOMContentLoaded', function () {
     function populateCardSelects() {
         if (!window.SFL_CARDS_DB) return;
 
+        // 獲取所有當前選中的卡片 ID，用於排除重複
+        const selectedIds = [];
+        for (let j = 1; j <= 5; j++) {
+            const val = document.getElementById(`card-slot-${j}`)?.value;
+            if (val) selectedIds.push(val);
+        }
+
         for (let i = 1; i <= 5; i++) {
             const select = document.getElementById(`card-slot-${i}`);
-            const level = document.getElementById(`card-lv-${i}`)?.value || 5;
+            const levelSelect = document.getElementById(`card-lv-${i}`);
+            const level = levelSelect ? levelSelect.value : 5;
             if (!select) continue;
 
             const currentValue = select.value;
             select.innerHTML = '<option value="">請選擇卡片</option>';
             
             window.SFL_CARDS_DB.forEach(card => {
+                const isSelectedElsewhere = selectedIds.includes(card.id) && card.id !== currentValue;
+                
                 const option = document.createElement('option');
                 option.value = card.id;
                 
@@ -32,7 +42,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (bonus.other_bonus) bonusParts.push(`傷+${Math.round(bonus.other_bonus * 100)}%`);
                 }
                 const bonusStr = bonusParts.length > 0 ? ` [${bonusParts.join(', ')}]` : '';
-                option.textContent = card.name + bonusStr;
+                const statusStr = isSelectedElsewhere ? ' (已在其他插槽使用)' : '';
+                
+                option.textContent = card.name + bonusStr + statusStr;
+                if (isSelectedElsewhere) {
+                    option.disabled = true;
+                    option.style.color = '#555';
+                }
+                
                 select.appendChild(option);
             });
             
@@ -133,14 +150,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const detailedInputs = document.querySelectorAll('#card-detailed-settings input, #card-detailed-settings select');
     detailedInputs.forEach(input => {
         input.addEventListener('input', () => {
-            // 如果是等級變更，需要重新生成卡片清單的文字
-            if (input.id.includes('card-lv')) {
+            // 如果是等級或卡片變更，需要重新生成卡片清單
+            if (input.id.includes('card-lv') || input.id.includes('card-slot')) {
                 populateCardSelects();
             }
             updateFinalStatsFromDetailed();
         });
         input.addEventListener('change', () => {
-            if (input.id.includes('card-lv')) {
+            if (input.id.includes('card-lv') || input.id.includes('card-slot')) {
                 populateCardSelects();
             }
             updateFinalStatsFromDetailed();
