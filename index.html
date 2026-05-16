@@ -11,8 +11,8 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v={{RELEASE_DATE}}">
-    <link rel="stylesheet" href="css/dungeon.css?v={{RELEASE_DATE}}">
+    <link rel="stylesheet" href="css/style.css?v={{COMMIT_SHA}}">
+    <link rel="stylesheet" href="css/dungeon.css?v={{COMMIT_SHA}}">
 </head>
 
 <body>
@@ -192,7 +192,7 @@
                     </div>
                 </div>
 
-                <script src="character/detailed.js"></script>
+                <script src="character/detailed.js?v={{COMMIT_SHA}}"></script>
 
                 <div class="card">
                     <div class="card-header">
@@ -352,11 +352,11 @@
     <div id="toast" class="toast">設定已保存！</div>
 
     <!-- 腳本引入 -->
-    <script src="fight/attribute.js?v={{RELEASE_DATE}}"></script>
-    <script src="character/skill.js?v={{RELEASE_DATE}}"></script>
-    <script src="character/genesis.js?v={{RELEASE_DATE}}"></script>
-    <script src="fight/partner.js?v={{RELEASE_DATE}}"></script>
-    <script src="dungeon/enemy/enemy.js?v={{RELEASE_DATE}}"></script>
+    <script src="fight/attribute.js?v={{COMMIT_SHA}}"></script>
+    <script src="character/skill.js?v={{COMMIT_SHA}}"></script>
+    <script src="character/genesis.js?v={{COMMIT_SHA}}"></script>
+    <script src="fight/partner.js?v={{COMMIT_SHA}}"></script>
+    <script src="dungeon/enemy/enemy.js?v={{COMMIT_SHA}}"></script>
 
     <script>
         // 視圖切換控制
@@ -420,11 +420,11 @@
     </script>
 
     <!-- 載入角色邏輯 (三個玩家共用邏輯或個別引入) -->
-    <script src="character/character.js?v={{RELEASE_DATE}}"></script>
-    <script src="dungeon/dungeon.js?v={{RELEASE_DATE}}"></script>
-    <script src="loadout/equips.js?v={{RELEASE_DATE}}"></script>
-    <script src="loadout/skills.js?v={{RELEASE_DATE}}"></script>
-    <script src="loadout/loadout.js?v={{RELEASE_DATE}}"></script>
+    <script src="character/character.js?v={{COMMIT_SHA}}"></script>
+    <script src="dungeon/dungeon.js?v={{COMMIT_SHA}}"></script>
+    <script src="loadout/equips.js?v={{COMMIT_SHA}}"></script>
+    <script src="loadout/skills.js?v={{COMMIT_SHA}}"></script>
+    <script src="loadout/loadout.js?v={{COMMIT_SHA}}"></script>
 </body>
 
 </html>
