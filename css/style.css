@@ -445,6 +445,12 @@ input:checked + .slider:before {
     transition: var(--transition);
     cursor: pointer;
     outline: none;
+    min-width: 0; /* 防止長文字撐開容器 */
+    width: 100%;
+}
+
+.card-db-select {
+    flex: 1;
 }
 
 .card-db-select:focus,
