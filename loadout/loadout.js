@@ -130,6 +130,9 @@
             loadoutInfo.style.color = '#f44747';
             filenameDisplay.textContent = '';
             console.error(e);
+        } finally {
+            // 重要：重置 value，這樣使用者選取同一個檔案時才會再次觸發 change 事件
+            event.target.value = '';
         }
     }
 
@@ -177,8 +180,8 @@
 
         // 1. Get Stat Points from sfl_stat_loadouts
         const statId = statSelect.value;
-        if (statId && decodedData.sfl_stat_loadouts[statId]) {
-            const statPoints = decodedData.sfl_stat_loadouts[statId].stats;
+        if (statId && decodedData.sfl_stat_loadouts && decodedData.sfl_stat_loadouts[statId]) {
+            const statPoints = decodedData.sfl_stat_loadouts[statId].stats || {};
 
             // 同步至細項設定
             updateInputValue('detail-hp', statPoints.hp || 0);
@@ -199,8 +202,8 @@
 
         // 2. Import Skills
         const skillId = skillSelect.value;
-        if (skillId && decodedData.sfl_skill_loadouts[skillId]) {
-            const skills = decodedData.sfl_skill_loadouts[skillId].skills;
+        if (skillId && decodedData.sfl_skill_loadouts && decodedData.sfl_skill_loadouts[skillId]) {
+            const skills = decodedData.sfl_skill_loadouts[skillId].skills || {};
             Object.entries(skills).forEach(([id, lvl]) => {
                 const skillName = skillDatabase[id];
                 if (skillName) {
@@ -217,8 +220,8 @@
 
         // 3. Get Card Bonuses from sfl_card_loadouts (always use level 5)
         const cardId = cardSelect.value;
-        if (cardId && decodedData.sfl_card_loadouts[cardId]) {
-            const cards = decodedData.sfl_card_loadouts[cardId].cards;
+        if (cardId && decodedData.sfl_card_loadouts && decodedData.sfl_card_loadouts[cardId]) {
+            const cards = decodedData.sfl_card_loadouts[cardId].cards || {};
 
             // 同步至細項設定 (SFL 卡片預設為 5 等)
             Object.entries(cards).forEach(([slot, cid]) => {
@@ -282,8 +285,12 @@
         }
 
         if (importCount > 0) {
-            loadoutInfo.textContent = `✅ 已成功導入 ${importNames.join('、')} 配置！請記得點擊「保存設定」以更新數據。`;
+            loadoutInfo.textContent = `✅ 已成功導入 ${importNames.join('、')} 配置！數據已自動保存。`;
             loadoutInfo.style.color = '#4ec9b0';
+            
+            // 自動觸發保存設定
+            const saveBtn = document.getElementById('save-btn');
+            if (saveBtn) saveBtn.click();
         } else {
             loadoutInfo.textContent = '⚠️ 請至少選擇一個分頁進行導入。';
             loadoutInfo.style.color = '#fb923c';
@@ -313,6 +320,8 @@
 
         // 1. Update Stats (Detailed Settings)
         if (statId) {
+            if (!decodedData.sfl_stat_loadouts) decodedData.sfl_stat_loadouts = {};
+            
             const stats = {
                 hp: Number(document.getElementById('detail-hp')?.value || 0),
                 attack: Number(document.getElementById('detail-attack')?.value || 0),
@@ -328,10 +337,12 @@
 
         // 2. Update Skills (Skill Form)
         if (skillId) {
+            if (!decodedData.sfl_skill_loadouts) decodedData.sfl_skill_loadouts = {};
+            
             if (!decodedData.sfl_skill_loadouts[skillId]) {
                 decodedData.sfl_skill_loadouts[skillId] = { skills: {}, playerLevel: 429, totalSkillPoints: 0 };
             }
-            const currentSkills = decodedData.sfl_skill_loadouts[skillId].skills;
+            const currentSkills = decodedData.sfl_skill_loadouts[skillId].skills || {};
 
             // 對原本資料中所有的技能 Key 進行更新，若 UI 沒列出則設為 0
             Object.keys(currentSkills).forEach(sId => {
@@ -357,6 +368,8 @@
 
         // 3. Update Cards (Card Slots)
         if (cardId) {
+            if (!decodedData.sfl_card_loadouts) decodedData.sfl_card_loadouts = {};
+            
             if (!decodedData.sfl_card_loadouts[cardId]) {
                 decodedData.sfl_card_loadouts[cardId] = { cards: {} };
             }
